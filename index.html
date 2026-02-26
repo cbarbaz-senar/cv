@@ -70,7 +70,7 @@
   tr:nth-child(even) td { background: #faf8f4; }
   tr:hover td { background: #f3efea; }
   .td-title { min-width: 160px; max-width: 220px; }
-  .td-title a { color: var(--navy); font-weight: 600; text-decoration: none; }
+  .td-title a { color: var(--navy); font-weight: 600; text-decoration: none; border-bottom: 1px dotted var(--gold); }
   .td-title a:hover { color: #4a5d8a; border-bottom-color: #4a5d8a;}
   .td-note { font-size: 11px; color: var(--muted); margin-top: 3px; font-style: italic; line-height: 1.4; }
   .td-date { color: var(--muted); white-space: nowrap; font-size: 11.5px; }
@@ -454,38 +454,6 @@ function renderStats() {
 function renderTable() {
   const q = document.getElementById('search-box').value.toLowerCase();
   const fs = document.getElementById('filter-status').value; filterActive=fs;
-
-// --- NOUVEAU : Logique de recherche insensible à la casse et aux accents ---
-  const normalize = (str) => 
-    (str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-  const searchNormal = normalize(q);
-
-  let list = jobs.filter(j => {
-    if(fs !== 'all' && j.status !== fs) return false;
-    if(!q) return true;
-
-    // On cherche dans le titre, l'entreprise, la ville et les notes
-    const contentToSearch = normalize(`${j.title} ${j.company} ${j.city} ${j.notes}`);
-    return contentToSearch.includes(searchNormal);
-  });
-  // ---
-
-  // --- Logique de recherche insensible à la casse et aux accents ---
-  const normalize = (str) => 
-    (str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-  const searchNormal = normalize(q);
-
-  let list = jobs.filter(j => {
-    if(fs !== 'all' && j.status !== fs) return false;
-    if(!q) return true;
-
-    // On cherche dans le titre, l'entreprise, la ville et les notes
-    const contentToSearch = normalize(`${j.title} ${j.company} ${j.city} ${j.notes}`);
-    return contentToSearch.includes(searchNormal);
-  });
-  // ---
 
   // Build sortable column headers
   const COLS = [
