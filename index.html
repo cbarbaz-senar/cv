@@ -26,9 +26,9 @@
   .logo span { font-family: 'DM Sans', sans-serif; font-size: 16px; color: #8a9bc0; display: block; font-weight: 300; }
   header nav { display: flex; gap: 8px; }
   .nav-btn { background: none; border: 1px solid #3a4a6a; color: #c0cce8; padding: 7px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; transition: all .2s; }
-  .nav-btn:hover, .nav-btn.active { background: #2d3d60; border-color: var(--gold); color: #fff; }
+  .nav-btn:hover, .nav-btn.active { background: #2d3d60; border-color: #cebea5; color: #fff; }
   .nav-btn.primary { background: var(--gold); color: var(--navy); border-color: var(--gold); font-weight: 600; }
-  .nav-btn.primary:hover { background: #35d4a8; }
+  .nav-btn.primary:hover { background: #cebea5; }
 
   /* MAIN LAYOUT */
   main { max-width: 1200px; margin: 0 auto; padding: 24px 24px 60px; }
@@ -51,12 +51,12 @@
   .search-box { padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; background: #fff; font-family: inherit; width: 220px; width: 100%; max-width: 250px; }
   .count-label { font-size: 12px; color: var(--muted); }
   .csv-btn { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--navy); font-size: 11px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap; transition: all .15s; }
-  .csv-btn:hover { background: var(--navy); color: var(--gold); border-color: var(--navy); }
+  .csv-btn:hover { background: #cebea5; color: var(--navy); border-color: #cebea5; }
 
   /* TABLE */
   .table-wrap { border-radius: 10px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,.06); overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; background: #fff; font-size: 12.5px; }
-  th { background: var(--navy); color: var(--gold); padding: 10px 12px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .7px; white-space: nowrap; font-weight: 600; user-select: none; }
+  th { background: var(--navy); color: #cebea5; padding: 10px 12px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .7px; white-space: nowrap; font-weight: 600; user-select: none; }
   th:hover { background: #2a3a5a; }
   th.th-check { width: 36px; cursor: default; }
   th.th-check:hover { background: var(--navy); }
@@ -495,7 +495,7 @@ function renderTable() {
         else { sortField=col.field; sortDir='asc'; }
         renderTable();
       };
-      if(sortField===col.field) th.style.color='#c0cce8';
+      if(sortField===col.field) th.style.color='#8a9bc0';
     } else {
       th.textContent='';
     }
