@@ -8,7 +8,7 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap');
   :root {
-    --navy: #1a2540; --gold: #c9a84c; --cream: #f7f4ee; --white: #ffffff;
+    --navy: #1a2540; --gold: #53eec0; --cream: #f7f4ee; --white: #ffffff;
     --border: #e2ddd4; --text: #2c2c2c; --muted: #8a8a8a;
     --s-book: #f5e6c8; --s-book-t: #7a5020;
     --s-app: #c8dff5; --s-app-t: #1a4a7a;
@@ -28,7 +28,7 @@
   .nav-btn { background: none; border: 1px solid #3a4a6a; color: #c0cce8; padding: 7px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; transition: all .2s; }
   .nav-btn:hover, .nav-btn.active { background: #2d3d60; border-color: var(--gold); color: #fff; }
   .nav-btn.primary { background: var(--gold); color: var(--navy); border-color: var(--gold); font-weight: 600; }
-  .nav-btn.primary:hover { background: #b8932e; }
+  .nav-btn.primary:hover { background: #35d4a8; }
 
   /* MAIN LAYOUT */
   main { max-width: 1200px; margin: 0 auto; padding: 24px 24px 60px; }
@@ -58,6 +58,13 @@
   table { width: 100%; border-collapse: collapse; background: #fff; font-size: 12.5px; }
   th { background: var(--navy); color: var(--gold); padding: 10px 12px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .7px; white-space: nowrap; font-weight: 600; user-select: none; }
   th:hover { background: #2a3a5a; }
+  th.th-check { width: 36px; cursor: default; }
+  th.th-check:hover { background: var(--navy); }
+  td.td-check { text-align: center; vertical-align: middle; }
+  td.td-check input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--navy); }
+  tr.selected-row { background: #eaf9f4 !important; }
+  #btn-delete-selected { display: none; padding: 6px 14px; border: 1px solid #e05555; border-radius: 6px; background: #fff; color: #c0392b; font-size: 11px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap; transition: all .15s; }
+  #btn-delete-selected:hover { background: #c0392b; color: #fff; }
   td { padding: 10px 12px; border-bottom: 1px solid #f0ece4; vertical-align: top; }
   tr:last-child td { border-bottom: none; }
   tr:nth-child(even) td { background: #faf8f4; }
@@ -186,6 +193,7 @@
         <label class="csv-btn" title="Importer des candidatures depuis un CSV" style="cursor:pointer;">
           ⬆ Import CSV <input type="file" accept=".csv" onchange="importCSV(event)" style="display:none">
         </label>
+        <button id="btn-delete-selected" onclick="deleteSelected()" title="Supprimer les offres sélectionnées">🗑 Supprimer la sélection</button>
       </div>
     </div>
 
@@ -417,6 +425,7 @@ function renderTable() {
 
   // Build sortable column headers
   const COLS = [
+    {label:'',            field:null, check:true},
     {label:'Poste',           field:'title'},
     {label:'Entreprise',      field:'company'},
     {label:'Ville',           field:'city'},
@@ -431,7 +440,20 @@ function renderTable() {
   const thead = document.getElementById('thead-row'); thead.innerHTML='';
   COLS.forEach(col=>{
     const th = document.createElement('th');
-    if(col.field){
+    if(col.check){
+      th.className = 'th-check';
+      const chk = document.createElement('input');
+      chk.type = 'checkbox'; chk.title = 'Tout sélectionner';
+      chk.id = 'chk-all';
+      chk.onchange = () => {
+        document.querySelectorAll('.row-chk').forEach(c => {
+          c.checked = chk.checked;
+          c.closest('tr').classList.toggle('selected-row', chk.checked);
+        });
+        updateDeleteBtn();
+      };
+      th.appendChild(chk);
+    } else if(col.field){
       const arrow = sortField===col.field ? (sortDir==='asc'?' ▲':' ▼') : '';
       th.innerHTML = col.label + `<span style="opacity:.6;font-size:10px">${arrow}</span>`;
       th.style.cursor='pointer'; th.title='Trier par '+col.label;
@@ -534,6 +556,15 @@ function renderTable() {
     tdActions.className = 'td-actions';
     tdActions.innerHTML = `<button class="action-btn" onclick="startEdit('${job.id}')" title="Modifier tout">✏️</button><button class="action-btn" onclick="deleteJob('${job.id}')" title="Supprimer">🗑</button>`;
 
+    // Checkbox de sélection
+    const tdCheck = document.createElement('td');
+    tdCheck.className = 'td-check';
+    const chk = document.createElement('input');
+    chk.type = 'checkbox'; chk.className = 'row-chk'; chk.dataset.id = job.id;
+    chk.onchange = () => { tr.classList.toggle('selected-row', chk.checked); updateDeleteBtn(); };
+    tdCheck.appendChild(chk);
+
+    tr.appendChild(tdCheck);
     tr.appendChild(tdTitle);
     tr.appendChild(makeEditableCell(job.company, 'company', 'td-company'));
     tr.appendChild(makeEditableCell(job.city, 'city'));
@@ -649,6 +680,23 @@ function submitForm() {
     notify('Offre enregistrée ✓');
   }
   save(jobs); editingId=null; showView('tracker');
+}
+
+function updateDeleteBtn() {
+  const count = document.querySelectorAll('.row-chk:checked').length;
+  const btn = document.getElementById('btn-delete-selected');
+  btn.style.display = count > 0 ? 'inline-flex' : 'none';
+  btn.textContent = `🗑 Supprimer (${count})`;
+}
+
+function deleteSelected() {
+  const ids = [...document.querySelectorAll('.row-chk:checked')].map(c => c.dataset.id);
+  if(!ids.length) return;
+  if(!confirm(`Supprimer ${ids.length} offre${ids.length>1?'s':''} ?`)) return;
+  jobs = jobs.filter(j => !ids.includes(j.id));
+  save(jobs);
+  notify(`${ids.length} offre${ids.length>1?'s':''} supprimée${ids.length>1?'s':''} ✓`);
+  renderStats(); renderTable();
 }
 
 function deleteJob(id) {
@@ -851,14 +899,43 @@ function importCSV(event) {
   reader.onload = function(e) {
     try {
       const text = e.target.result.replace(/^\uFEFF/,''); // retire le BOM si présent
-      const lines = text.split(/\r?\n/).filter(l => l.trim());
-      if(lines.length < 2){ notify('CSV vide ou invalide.','err'); return; }
+      if(!text.trim()){ notify('CSV vide.','err'); return; }
 
-      // Détecte les colonnes depuis l'en-tête
-      const sep = lines[0].includes(';') ? ';' : ',';
-      const headers = parseCSVLine(lines[0], sep).map(h => h.trim().toLowerCase());
+      // Détecte le séparateur
+      const sep = (text.indexOf(';') !== -1 && text.split('\n')[0].split(';').length > text.split('\n')[0].split(',').length) ? ';' : ',';
+
+      // Parse le CSV entier d'un coup — gère les champs multi-lignes entre guillemets
+      function parseFullCSV(raw, s) {
+        const rows = []; let row = [], cell = '', inQ = false;
+        for(let i = 0; i < raw.length; i++) {
+          const c = raw[i];
+          if(c === '"') {
+            if(inQ && raw[i+1] === '"') { cell += '"'; i++; }
+            else inQ = !inQ;
+          } else if(c === s && !inQ) {
+            row.push(cell); cell = '';
+          } else if(c === '\n' && !inQ) {
+            row.push(cell); cell = '';
+            if(row.some(v => v.trim())) rows.push(row);
+            row = [];
+          } else if(c === '\r') {
+            // skip \r
+          } else {
+            cell += c;
+          }
+        }
+        row.push(cell);
+        if(row.some(v => v.trim())) rows.push(row);
+        return rows;
+      }
+
+      const rows = parseFullCSV(text, sep);
+      if(rows.length < 2){ notify('CSV vide ou sans données.','err'); return; }
+
+      const headers = rows[0].map(h => h.trim().toLowerCase());
 
       // Mapping en-tête FR/EN → clé interne
+      // jobDescription volontairement absent : ce champ n'est JAMAIS importé
       const HEADER_MAP = {
         'poste':'title','titre':'title','title':'title','job title':'title',
         'entreprise':'company','company':'company','société':'company',
@@ -874,27 +951,25 @@ function importCSV(event) {
       };
 
       const colMap = headers.map(h => HEADER_MAP[h] || null);
-      const hasTitle = colMap.includes('title');
-      const hasCompany = colMap.includes('company');
-      if(!hasTitle && !hasCompany){ notify('Colonnes "Poste" et "Entreprise" introuvables dans le CSV.','err'); return; }
+      if(!colMap.includes('title') && !colMap.includes('company')){
+        notify('Colonnes "Poste" et "Entreprise" introuvables dans le CSV.','err'); return;
+      }
 
       let imported = 0, skipped = 0, merged = 0;
       const existingUrls = new Set(jobs.map(j=>j.url).filter(Boolean));
       const existingKeys = new Set(jobs.map(j=>(j.title+'|'+j.company).toLowerCase()));
 
       const newJobs = [...jobs];
-      for(let i=1; i<lines.length; i++){
-        const vals = parseCSVLine(lines[i], sep);
-        if(!vals.length) continue;
+      for(let i = 1; i < rows.length; i++){
+        const vals = rows[i];
         const obj = {};
-        colMap.forEach((key,idx) => { if(key) obj[key] = (vals[idx]||'').trim(); });
+        colMap.forEach((key, idx) => { if(key) obj[key] = (vals[idx]||'').trim(); });
         if(!obj.title && !obj.company){ skipped++; continue; }
 
-        // Évite les doublons (même URL ou même poste+entreprise)
         const key = (obj.title+'|'+obj.company).toLowerCase();
         if((obj.url && existingUrls.has(obj.url)) || existingKeys.has(key)){ merged++; continue; }
 
-        obj.id = obj.id || (Date.now() + i).toString();
+        obj.id = Date.now().toString() + i;
         if(!obj.dateAdded) obj.dateAdded = new Date().toISOString().slice(0,10);
         if(!obj.status) obj.status = 'bookmarked';
         newJobs.push(obj);
