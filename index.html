@@ -22,8 +22,8 @@
 
   /* HEADER */
   header { background: var(--navy); color: #fff; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 12px rgba(0,0,0,.25); }
-  .logo { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--gold); letter-spacing: -.3px; }
-  .logo span { font-family: 'DM Sans', sans-serif; font-size: 11px; color: #8a9bc0; display: block; font-weight: 300; }
+  .logo { font-family: 'DM Sans', sans serif; font-size: 24px; color: var(--gold); letter-spacing: -.3px; }
+  .logo span { font-family: 'DM Sans', sans-serif; font-size: 16px; color: #8a9bc0; display: block; font-weight: 300; }
   header nav { display: flex; gap: 8px; }
   .nav-btn { background: none; border: 1px solid #3a4a6a; color: #c0cce8; padding: 7px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; transition: all .2s; }
   .nav-btn:hover, .nav-btn.active { background: #2d3d60; border-color: var(--gold); color: #fff; }
@@ -47,8 +47,8 @@
 
   /* CONTROLS */
   .controls { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
-  .controls select { padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; background: #fff; font-family: inherit; cursor: pointer; color: var(--text); }
-  .search-box { padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; background: #fff; font-family: inherit; width: 220px; }
+  .controls select { padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; background: transparent; font-family: inherit; cursor: pointer; color: var(--text); width: auto; min-width: 160px; max-width: 220px; outline: none; }
+  .search-box { padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; background: #fff; font-family: inherit; width: 220px; width: 100%; max-width: 250px; }
   .count-label { font-size: 12px; color: var(--muted); }
   .csv-btn { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--navy); font-size: 11px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap; transition: all .15s; }
   .csv-btn:hover { background: var(--navy); color: var(--gold); border-color: var(--navy); }
@@ -71,7 +71,7 @@
   tr:hover td { background: #f3efea; }
   .td-title { min-width: 160px; max-width: 220px; }
   .td-title a { color: var(--navy); font-weight: 600; text-decoration: none; border-bottom: 1px dotted var(--gold); }
-  .td-title a:hover { color: var(--gold); }
+  .td-title a:hover { color: #4a5d8a; border-bottom-color: #4a5d8a;}
   .td-note { font-size: 11px; color: var(--muted); margin-top: 3px; font-style: italic; line-height: 1.4; }
   .td-date { color: var(--muted); white-space: nowrap; font-size: 11.5px; }
   .td-company { font-weight: 600; min-width: 120px; }
@@ -92,9 +92,37 @@
   @keyframes flashSave { 0%{background:#d4f0da} 100%{background:transparent} }
 
   /* EMPTY STATE */
-  .empty { text-align: center; padding: 64px 20px; color: var(--muted); }
-  .empty-icon { font-size: 48px; margin-bottom: 12px; }
-  .empty h3 { font-size: 16px; color: var(--text); margin-bottom: 6px; }
+  .empty { 
+    text-align: center; 
+    padding: 80px 20px; 
+    color: var(--muted);
+    background: #fff; /* Fond blanc pour détacher du fond crème */
+    border-radius: 12px;
+    border: 1px dashed var(--border); /* Bordure en pointillés pour le style */
+    margin-top: 20px;
+  }
+  .empty-icon { 
+    font-size: 54px; 
+    margin-bottom: 16px; 
+    display: block;
+    filter: grayscale(1); /* Un look plus sobre */
+    opacity: 0.5;
+  }
+  .empty h3 { 
+    font-family: 'DM Sans', sans-serif; /* On utilise ta typo de titre */
+    font-size: 18px; 
+    color: var(--navy); 
+    margin-bottom: 10px; 
+    font-weight: 400;
+  }
+  .empty p { 
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; 
+    color: var(--muted);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
 
   /* FORM PANEL */
   #form-panel { display: none; }
@@ -178,6 +206,8 @@
 
     <div class="controls">
       <input class="search-box" type="text" placeholder="🔍 Rechercher poste, entreprise…" oninput="renderTable()" id="search-box">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--muted); flex-shrink: 0;">
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
       <select onchange="renderTable()" id="filter-status">
         <option value="all">Tous les statuts</option>
         <option value="bookmarked">Saved</option>
@@ -188,10 +218,11 @@
         <option value="abandoned">Abandoned</option>
       </select>
       <span class="count-label" id="count-label"></span>
+      
       <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
-        <button class="csv-btn" onclick="exportCSV()" title="Télécharger toutes les candidatures en CSV">⬇ Export CSV</button>
+        <button class="csv-btn" onclick="exportCSV()" title="Télécharger toutes les candidatures en CSV">⬇ EXPORT CSV</button>
         <label class="csv-btn" title="Importer des candidatures depuis un CSV" style="cursor:pointer;">
-          ⬆ Import CSV <input type="file" accept=".csv" onchange="importCSV(event)" style="display:none">
+          ⬆ IMPORT CSV <input type="file" accept=".csv" onchange="importCSV(event)" style="display:none">
         </label>
         <button id="btn-delete-selected" onclick="deleteSelected()" title="Supprimer les offres sélectionnées">🗑 Supprimer la sélection</button>
       </div>
@@ -199,6 +230,7 @@
 
     <div class="table-wrap">
       <table>
+  
         <thead>
           <tr id="thead-row"></tr>
         </thead>
@@ -462,7 +494,7 @@ function renderTable() {
         else { sortField=col.field; sortDir='asc'; }
         renderTable();
       };
-      if(sortField===col.field) th.style.color='#e8d090';
+      if(sortField===col.field) th.style.color='#c0cce8';
     } else {
       th.textContent='';
     }
