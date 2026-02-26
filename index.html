@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JOB Tracker</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%231a2540'/><circle cx='50' cy='50' r='36' fill='%23c9a84c'/><circle cx='50' cy='50' r='24' fill='%231a2540'/><circle cx='50' cy='50' r='12' fill='%23c9a84c'/></svg>">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap');
+  :root {
+    --navy: #1a2540; --gold: #c9a84c; --cream: #f7f4ee; --white: #ffffff;
+    --border: #e2ddd4; --text: #2c2c2c; --muted: #8a8a8a;
+    --s-book: #f5e6c8; --s-book-t: #7a5020;
+    --s-app: #c8dff5; --s-app-t: #1a4a7a;
+    --s-int: #c8f5d8; --s-int-t: #1a7a3a;
+    --s-off: #e0c8f5; --s-off-t: #5a1a7a;
+    --s-rej: #f5c8c8; --s-rej-t: #7a1a1a;
+    --s-abd: #e0e0e0; --s-abd-t: #555;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--text); min-height: 100vh; }
+
+  /* HEADER */
+  header { background: var(--navy); color: #fff; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 12px rgba(0,0,0,.25); }
+  .logo { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--gold); letter-spacing: -.3px; }
+  .logo span { font-family: 'DM Sans', sans-serif; font-size: 11px; color: #8a9bc0; display: block; font-weight: 300; }
+  header nav { display: flex; gap: 8px; }
+  .nav-btn { background: none; border: 1px solid #3a4a6a; color: #c0cce8; padding: 7px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; transition: all .2s; }
+  .nav-btn:hover, .nav-btn.active { background: #2d3d60; border-color: var(--gold); color: #fff; }
+  .nav-btn.primary { background: var(--gold); color: var(--navy); border-color: var(--gold); font-weight: 600; }
+  .nav-btn.primary:hover { background: #b8932e; }
+
+  /* MAIN LAYOUT */
+  main { max-width: 1200px; margin: 0 auto; padding: 24px 24px 60px; }
+
+  /* NOTIFICATION */
+  #notif { display: none; position: fixed; top: 72px; right: 24px; padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; z-index: 200; box-shadow: 0 4px 16px rgba(0,0,0,.15); animation: slideIn .3s ease; }
+  @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  #notif.ok { background: #e8fde8; color: #1e7a2e; border: 1px solid #a8dca8; }
+  #notif.err { background: #fde8e8; color: #7a1e1e; border: 1px solid #dca8a8; }
+
+  /* STATS */
+  .stats-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+  .stat-chip { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; transition: opacity .2s; border: 2px solid transparent; }
+  .stat-chip:hover { opacity: .8; }
+  .stat-chip.selected { border-color: currentColor; }
+
+  /* CONTROLS */
+  .controls { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .controls select { padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; background: #fff; font-family: inherit; cursor: pointer; color: var(--text); }
+  .search-box { padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; background: #fff; font-family: inherit; width: 220px; }
+  .count-label { font-size: 12px; color: var(--muted); }
+  .csv-btn { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--navy); font-size: 11px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap; transition: all .15s; }
+  .csv-btn:hover { background: var(--navy); color: var(--gold); border-color: var(--navy); }
+
+  /* TABLE */
+  .table-wrap { border-radius: 10px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,.06); overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; background: #fff; font-size: 12.5px; }
+  th { background: var(--navy); color: var(--gold); padding: 10px 12px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .7px; white-space: nowrap; font-weight: 600; user-select: none; }
+  th:hover { background: #2a3a5a; }
+  td { padding: 10px 12px; border-bottom: 1px solid #f0ece4; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #faf8f4; }
+  tr:hover td { background: #f3efea; }
+  .td-title { min-width: 160px; max-width: 220px; }
+  .td-title a { color: var(--navy); font-weight: 600; text-decoration: none; border-bottom: 1px dotted var(--gold); }
+  .td-title a:hover { color: var(--gold); }
+  .td-note { font-size: 11px; color: var(--muted); margin-top: 3px; font-style: italic; line-height: 1.4; }
+  .td-date { color: var(--muted); white-space: nowrap; font-size: 11.5px; }
+  .td-company { font-weight: 600; min-width: 120px; }
+  .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .status-select { border: none; border-radius: 12px; padding: 3px 8px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .td-actions { white-space: nowrap; }
+  .action-btn { background: none; border: none; cursor: pointer; font-size: 14px; padding: 3px 5px; opacity: .7; transition: opacity .15s; }
+  .action-btn:hover { opacity: 1; }
+
+  /* INLINE EDITING */
+  .editable { cursor: pointer; border-radius: 4px; transition: background-color .15s; }
+  .editable:hover { background: #f0ede5; }
+  .editable:hover .edit-hint { opacity: 1; }
+  .edit-hint { font-size: 10px; color: var(--muted); margin-left: 4px; opacity: 0; transition: opacity .15s; }
+  .inline-input { width: 100%; padding: 4px 7px; border: 2px solid var(--navy); border-radius: 5px; font-size: 12.5px; font-family: inherit; background: #fffef9; color: var(--text); outline: none; box-shadow: 0 2px 8px rgba(26,37,64,.12); box-sizing: border-box; }
+  .inline-input[type=date] { min-width: 130px; cursor: pointer; }
+  td.flash { animation: flashSave .6s ease; }
+  @keyframes flashSave { 0%{background:#d4f0da} 100%{background:transparent} }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; padding: 64px 20px; color: var(--muted); }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty h3 { font-size: 16px; color: var(--text); margin-bottom: 6px; }
+
+  /* FORM PANEL */
+  #form-panel { display: none; }
+  .panel-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--navy); margin-bottom: 20px; }
+  .form-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 28px 32px; box-shadow: 0 2px 16px rgba(0,0,0,.08); margin-bottom: 20px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; margin-bottom: 14px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field.full { grid-column: 1 / -1; }
+  label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+  input, select, textarea { padding: 9px 12px; border: 1px solid var(--border); border-radius: 7px; font-size: 13px; font-family: inherit; outline: none; transition: border-color .2s; background: #fff; color: var(--text); width: 100%; }
+  input:focus, select:focus, textarea:focus { border-color: var(--navy); }
+  textarea { resize: vertical; min-height: 70px; }
+  .status-picker { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .status-opt { padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; border: 2px solid transparent; transition: all .15s; background: #f0ece4; color: #888; }
+  .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+  .btn-cancel { padding: 9px 20px; border: 1px solid var(--border); border-radius: 7px; background: #fff; color: var(--muted); cursor: pointer; font-family: inherit; font-size: 13px; }
+  .btn-save { padding: 9px 22px; border: none; border-radius: 7px; background: var(--navy); color: var(--gold); cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; }
+  .btn-save:hover { background: #2a3a5a; }
+
+  /* IMPORT BANNER */
+  .import-banner { background: linear-gradient(135deg, #1a2540, #2a3d6a); color: #fff; border-radius: 12px; padding: 16px 24px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px; }
+  .import-banner .icon { font-size: 28px; }
+  .import-banner h3 { font-size: 14px; color: var(--gold); margin-bottom: 3px; }
+  .import-banner p { font-size: 12px; color: #8a9bc0; }
+  .btn-import { margin-left: auto; background: var(--gold); color: var(--navy); border: none; padding: 8px 18px; border-radius: 7px; font-weight: 700; font-size: 12px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+
+  /* BOOKMARKLET PANEL */
+  #bm-panel { display: none; }
+  .bm-steps { counter-reset: steps; }
+  .bm-step { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin-bottom: 12px; display: flex; gap: 16px; align-items: flex-start; }
+  .bm-num { background: var(--navy); color: var(--gold); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; margin-top: 2px; }
+  .bm-step h3 { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--navy); }
+  .bm-step p { font-size: 13px; color: #555; line-height: 1.6; }
+  .bm-btn-wrap { margin-top: 12px; }
+  .bm-btn { background: var(--gold); color: var(--navy); border: none; padding: 10px 20px; border-radius: 7px; font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 8px; }
+  .bm-btn:hover { background: #b8932e; }
+  .bm-code { background: #1a2540; color: #c8dfc0; font-family: monospace; font-size: 10px; padding: 12px 16px; border-radius: 8px; margin-top: 10px; word-break: break-all; line-height: 1.5; max-height: 80px; overflow: auto; }
+  .copy-btn { background: #2d3d60; color: #c8dfc0; border: 1px solid #3a4d7a; padding: 5px 12px; border-radius: 5px; font-size: 11px; cursor: pointer; font-family: monospace; margin-top: 6px; }
+  .sites-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .site-tag { background: #e8f0fe; color: #1a4a7a; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+  .drag-area { border: 2px dashed var(--gold); border-radius: 10px; padding: 20px; text-align: center; background: #fffdf5; margin-top: 12px; }
+  .drag-area .drag-link { display: inline-block; background: var(--navy); color: var(--gold); padding: 10px 20px; border-radius: 7px; font-weight: 700; font-size: 14px; text-decoration: none; cursor: grab; border: 2px solid var(--gold); margin: 10px 0; }
+  .drag-area p { font-size: 12px; color: var(--muted); }
+
+  @media (max-width: 680px) {
+    .form-grid { grid-template-columns: 1fr; }
+    header { flex-direction: column; gap: 12px; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+    <div class="logo">
+      My Job Tracker
+      <span>Suivi de mes candidatures</span>
+    </div>
+  <nav>
+    <button class="nav-btn active" onclick="showView('tracker')" id="btn-tracker">📋 Mes candidatures</button>
+    <button class="nav-btn" onclick="showView('add')" id="btn-add">+ Ajouter</button>
+    <button class="nav-btn" onclick="showView('bm')" id="btn-bm">🔖 Bookmarklet</button>
+  </nav>
+</header>
+
+<div id="notif"></div>
+
+<main>
+
+  <!-- TRACKER VIEW -->
+  <div id="tracker-panel">
+    <div id="import-banner" class="import-banner" style="display:none">
+      <div class="icon">✨</div>
+      <div>
+        <h3>Offre détectée !</h3>
+        <p id="import-desc">Une offre a été capturée depuis votre navigateur.</p>
+      </div>
+      <button class="btn-import" onclick="confirmImport()">Enregistrer cette offre →</button>
+    </div>
+
+    <div class="stats-bar" id="stats-bar"></div>
+
+    <div class="controls">
+      <input class="search-box" type="text" placeholder="🔍 Rechercher poste, entreprise…" oninput="renderTable()" id="search-box">
+      <select onchange="renderTable()" id="filter-status">
+        <option value="all">Tous les statuts</option>
+        <option value="bookmarked">Saved</option>
+        <option value="applied">Applied</option>
+        <option value="interview">Interview</option>
+        <option value="offer">Offer</option>
+        <option value="rejected">Rejected</option>
+        <option value="abandoned">Abandoned</option>
+      </select>
+      <span class="count-label" id="count-label"></span>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+        <button class="csv-btn" onclick="exportCSV()" title="Télécharger toutes les candidatures en CSV">⬇ Export CSV</button>
+        <label class="csv-btn" title="Importer des candidatures depuis un CSV" style="cursor:pointer;">
+          ⬆ Import CSV <input type="file" accept=".csv" onchange="importCSV(event)" style="display:none">
+        </label>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr id="thead-row"></tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <div id="empty-state" class="empty" style="display:none">
+      <div class="empty-icon">📋</div>
+      <h3>Aucune offre trouvée</h3>
+      <p>Clique sur "+ Ajouter" ou utilise le bookmarklet sur une page d'annonce.</p>
+    </div>
+  </div>
+
+  <!-- ADD/EDIT FORM -->
+  <div id="form-panel">
+    <p class="panel-title" id="form-title">Nouvelle offre</p>
+    <div class="form-card">
+      <div class="form-grid">
+        <div class="field"><label>Poste *</label><input type="text" id="f-title" placeholder="ex : Chargée de communication digitale"></div>
+        <div class="field"><label>Entreprise *</label><input type="text" id="f-company" placeholder="ex : BNP Paribas"></div>
+        <div class="field"><label>Ville</label><input type="text" id="f-city" placeholder="ex : Paris 9e, Lyon, Bordeaux"></div>
+        <div class="field"><label>Type de contrat</label>
+          <select id="f-contract">
+            <option value="">— non précisé —</option>
+            <option value="CDI">CDI</option>
+            <option value="CDD">CDD</option>
+            <option value="Freelance">Freelance / Mission</option>
+            <option value="Stage">Stage</option>
+            <option value="Alternance">Alternance</option>
+            <option value="Intérim">Intérim</option>
+          </select>
+        </div>
+        <div class="field"><label>Salaire / fourchette</label><input type="text" id="f-salary" placeholder="ex : 38-42k€ brut/an"></div>
+        <div class="field"><label>Date de candidature</label><input type="date" id="f-dateApplied"></div>
+        <div class="field"><label>Date de réponse</label><input type="date" id="f-dateResponse"></div>
+        <div class="field full"><label>Lien de l'offre</label><input type="url" id="f-url" placeholder="https://…"></div>
+      </div>
+      <div class="field" style="margin-bottom:14px">
+        <label>Statut</label>
+        <div class="status-picker" id="status-picker"></div>
+      </div>
+      <div class="field">
+        <label>Notes personnelles</label>
+        <textarea id="f-notes" placeholder="Contacts rencontrés, points clés de l'offre, impressions, relances à prévoir…"></textarea>
+      </div>
+      <div class="field">
+        <label>Descriptif de l'annonce <span style="font-weight:300;text-transform:none;font-size:11px">(capturé automatiquement par le bookmarklet)</span></label>
+        <textarea id="f-jobDescription" placeholder="Le descriptif complet du poste sera capturé automatiquement. Tu peux aussi le coller ici manuellement." style="min-height:120px;font-size:11.5px;color:#666"></textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn-cancel" onclick="cancelForm()">Annuler</button>
+        <button class="btn-save" onclick="submitForm()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOOKMARKLET PANEL -->
+  <div id="bm-panel">
+    <p class="panel-title">🔖 Installer le Bookmarklet</p>
+    <p style="font-size:13px;color:#555;margin-bottom:20px;line-height:1.6">Le bookmarklet te permet de capturer une annonce d'emploi en <strong>1 clic</strong> depuis ton navigateur. Les informations (poste, entreprise, ville, salaire, lien) sont extraites automatiquement.</p>
+
+    <div class="bm-step">
+      <div class="bm-num">1</div>
+      <div>
+        <h3>Génère ton bookmarklet personnalisé</h3>
+        <p>Ce bouton génère un bookmarklet configuré pour fonctionner avec <strong>ce fichier</strong> sur ton ordinateur.</p>
+        <div class="bm-btn-wrap">
+          <button class="bm-btn" onclick="generateBookmarklet()">⚙️ Générer mon bookmarklet</button>
+        </div>
+        <div id="bm-generated" style="display:none">
+          <div class="drag-area">
+            <p style="margin-bottom:6px;font-size:13px;font-weight:600;color:#333">👇 Glisse ce bouton dans ta barre de favoris</p>
+            <a id="bm-link" href="#" class="drag-link">📌 Sauvegarder l'offre</a>
+            <p>ou copie le code ci-dessous si le glisser-déposer ne fonctionne pas</p>
+          </div>
+          <div class="bm-code" id="bm-code"></div>
+          <button class="copy-btn" onclick="copyBmCode()">📋 Copier le code</button>
+          <p style="font-size:11px;color:#aaa;margin-top:6px">Si tu copies le code : dans Chrome → Gestionnaire de signets → Nouveau signet → colle le code dans le champ "URL"</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bm-step">
+      <div class="bm-num">2</div>
+      <div>
+        <h3>Utilise-le sur une page d'offre d'emploi</h3>
+        <p>Navigue jusqu'à une annonce, puis <strong>clique sur le bookmarklet</strong> dans ta barre de favoris. Un formulaire pré-rempli apparaîtra sur la page. Vérifie les informations extraites et clique "Enregistrer dans le tracker".</p>
+        <div class="sites-list">
+          <span class="site-tag">✅ LinkedIn</span>
+          <span class="site-tag">✅ Welcome to the Jungle</span>
+          <span class="site-tag">✅ Indeed.fr</span>
+          <span class="site-tag">✅ France Travail</span>
+          <span class="site-tag">✅ APEC</span>
+          <span class="site-tag">✅ Cadremploi</span>
+          <span class="site-tag">✅ Monster.fr</span>
+          <span class="site-tag">✅ HelloWork</span>
+          <span class="site-tag">✅ Autres sites</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bm-step">
+      <div class="bm-num">3</div>
+      <div>
+        <h3>L'offre apparaît dans ton tracker</h3>
+        <p>Une bannière s'affiche en haut de cette page pour confirmer l'import. Clique "Enregistrer" et c'est dans ta liste ! Tu pourras toujours modifier les détails ensuite.</p>
+      </div>
+    </div>
+
+    <div class="bm-step" style="border-color:#e8d5a0;background:#fffdf0">
+      <div class="bm-num" style="background:#c9a84c;color:#1a2540">💡</div>
+      <div>
+        <h3>Si le bookmarklet ne pré-remplit rien</h3>
+        <p>Certains sites bloquent les scripts externes. Dans ce cas, le formulaire s'ouvre vide et tu remplis manuellement. La date d'ajout et le lien de l'offre sont toujours capturés automatiquement.</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ============================================================
+// DATA & STORAGE
+// ============================================================
+const STORAGE_KEY = 'jt_jobs_v2';
+
+const STATUSES = [
+  { key:'bookmarked', label:'Saved',     bg:'var(--s-book)', t:'var(--s-book-t)' },
+  { key:'applied',    label:'Applied',   bg:'var(--s-app)',  t:'var(--s-app-t)'  },
+  { key:'interview',  label:'Interview', bg:'var(--s-int)',  t:'var(--s-int-t)'  },
+  { key:'offer',      label:'Offer',     bg:'var(--s-off)',  t:'var(--s-off-t)'  },
+  { key:'rejected',   label:'Rejected',  bg:'var(--s-rej)',  t:'var(--s-rej-t)'  },
+  { key:'abandoned',  label:'Abandoned', bg:'var(--s-abd)',  t:'var(--s-abd-t)'  },
+];
+const ST = Object.fromEntries(STATUSES.map(s=>[s.key,s]));
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
+}
+function save(jobs) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs)); } catch { notify('Erreur de sauvegarde','err'); }
+}
+
+let jobs = load();
+let editingId = null;
+let pendingImport = null;
+let filterActive = 'all';
+let sortField = 'dateAdded';
+let sortDir = 'desc'; // 'asc' | 'desc'
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+function notify(msg, type='ok') {
+  const el = document.getElementById('notif');
+  el.textContent = msg; el.className = type; el.style.display = 'block';
+  setTimeout(()=>{ el.style.display='none'; }, 2800);
+}
+
+// ============================================================
+// VIEWS
+// ============================================================
+function showView(v) {
+  ['tracker','form','bm'].forEach(id => {
+    document.getElementById(id+'-panel').style.display = 'none';
+    const btn = document.getElementById('btn-'+id);
+    if(btn) btn.classList.remove('active');
+  });
+  document.getElementById(v+'-panel').style.display = 'block';
+  const btn = document.getElementById('btn-'+v);
+  if(btn) btn.classList.add('active');
+  if(v==='tracker') { renderStats(); renderTable(); checkPending(); }
+  if(v==='form') buildStatusPicker();
+  if(v==='add') { showView('form'); buildStatusPicker(); }
+}
+
+// ============================================================
+// STATUS PICKER
+// ============================================================
+function buildStatusPicker(selected='bookmarked') {
+  const p = document.getElementById('status-picker'); p.innerHTML='';
+  STATUSES.forEach(s=>{
+    const b = document.createElement('button');
+    b.className='status-opt'; b.textContent=s.label; b.dataset.key=s.key;
+    b.style.cssText=`background:${s.bg};color:${s.t};border-color:transparent`;
+    b.onclick=()=>{
+      document.querySelectorAll('.status-opt').forEach(x=>{ x.style.borderColor='transparent'; delete x.dataset.selected; });
+      b.style.borderColor=s.t; b.dataset.selected='1';
+    };
+    if(s.key===selected){ b.style.borderColor=s.t; b.dataset.selected='1'; }
+    p.appendChild(b);
+  });
+}
+
+function getSelectedStatus() {
+  const b = document.querySelector('.status-opt[data-selected="1"]');
+  return b ? b.dataset.key : 'bookmarked';
+}
+
+// ============================================================
+// STATS
+// ============================================================
+function renderStats() {
+  const bar = document.getElementById('stats-bar'); bar.innerHTML='';
+  STATUSES.forEach(s=>{
+    const n = jobs.filter(j=>j.status===s.key).length;
+    if(!n) return;
+    const c = document.createElement('div');
+    c.className='stat-chip'+(filterActive===s.key?' selected':'');
+    c.style.cssText=`background:${s.bg};color:${s.t}`;
+    c.textContent=n+' '+s.label.split(' ').slice(1).join(' ');
+    c.title='Filtrer : '+s.label;
+    c.onclick=()=>{ filterActive=filterActive===s.key?'all':s.key; document.getElementById('filter-status').value=filterActive; renderTable(); renderStats(); };
+    bar.appendChild(c);
+  });
+}
+
+// ============================================================
+// TABLE
+// ============================================================
+function renderTable() {
+  const q = document.getElementById('search-box').value.toLowerCase();
+  const fs = document.getElementById('filter-status').value; filterActive=fs;
+
+  // Build sortable column headers
+  const COLS = [
+    {label:'Poste',           field:'title'},
+    {label:'Entreprise',      field:'company'},
+    {label:'Ville',           field:'city'},
+    {label:'Contrat',         field:'contract'},
+    {label:'Salaire',         field:'salary'},
+    {label:'Ajoutée le',      field:'dateAdded'},
+    {label:'Candidatée le',   field:'dateApplied'},
+    {label:'Réponse le',      field:'dateResponse'},
+    {label:'Statut',          field:'status'},
+    {label:'',                field:null}, // Actions
+  ];
+  const thead = document.getElementById('thead-row'); thead.innerHTML='';
+  COLS.forEach(col=>{
+    const th = document.createElement('th');
+    if(col.field){
+      const arrow = sortField===col.field ? (sortDir==='asc'?' ▲':' ▼') : '';
+      th.innerHTML = col.label + `<span style="opacity:.6;font-size:10px">${arrow}</span>`;
+      th.style.cursor='pointer'; th.title='Trier par '+col.label;
+      th.onclick=()=>{
+        if(sortField===col.field){ sortDir=sortDir==='asc'?'desc':'asc'; }
+        else { sortField=col.field; sortDir='asc'; }
+        renderTable();
+      };
+      if(sortField===col.field) th.style.color='#e8d090';
+    } else {
+      th.textContent='';
+    }
+    thead.appendChild(th);
+  });
+
+  let list = jobs.filter(j=>{
+    if(fs!=='all' && j.status!==fs) return false;
+    if(q && !((j.title||'').toLowerCase().includes(q)||(j.company||'').toLowerCase().includes(q)||(j.city||'').toLowerCase().includes(q)||(j.notes||'').toLowerCase().includes(q))) return false;
+    return true;
+  });
+
+  list.sort((a,b)=>{
+    let va = (a[sortField]||'').toLowerCase();
+    let vb = (b[sortField]||'').toLowerCase();
+    const cmp = va.localeCompare(vb, 'fr', {numeric:true});
+    return sortDir==='asc' ? cmp : -cmp;
+  });
+
+  const tbody = document.getElementById('table-body'); tbody.innerHTML='';
+  const empty = document.getElementById('empty-state');
+  document.getElementById('count-label').textContent = list.length+' offre'+(list.length!==1?'s':'');
+
+  if(!list.length){ empty.style.display='block'; document.querySelector('.table-wrap').style.display='none'; return; }
+  empty.style.display='none'; document.querySelector('.table-wrap').style.display='block';
+
+  list.forEach(job=>{
+    const st = ST[job.status]||STATUSES[0];
+    const tr = document.createElement('tr');
+
+    // Helper : crée une cellule inline-éditable texte
+    function makeEditableCell(value, field, cls='') {
+      const td = document.createElement('td');
+      if(cls) td.className = cls;
+      td.innerHTML = `<span class="editable" title="Cliquer pour modifier">${esc(value)||'<span style="color:#ccc">—</span>'}<span class="edit-hint">✎</span></span>`;
+      td.querySelector('.editable').onclick = () => activateInlineEdit(td, job.id, field, value, 'text');
+      return td;
+    }
+
+    // Helper : crée une cellule inline-éditable date
+    function makeDateCell(value, field) {
+      const td = document.createElement('td');
+      td.className = 'td-date';
+      td.innerHTML = `<span class="editable" title="Cliquer pour modifier">${fmt(value)||'<span style="color:#ccc">—</span>'}<span class="edit-hint">✎</span></span>`;
+      td.querySelector('.editable').onclick = () => activateInlineEdit(td, job.id, field, value, 'date');
+      return td;
+    }
+
+    // Colonne titre (avec lien + note)
+    const tdTitle = document.createElement('td');
+    tdTitle.className = 'td-title';
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'editable';
+    titleSpan.title = 'Cliquer pour modifier';
+    titleSpan.innerHTML = (job.url ? `<a href="${esc(job.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(job.title)}</a>` : esc(job.title)) + '<span class="edit-hint">✎</span>';
+    titleSpan.onclick = (e) => { if(e.target.tagName==='A') return; activateInlineEdit(tdTitle, job.id, 'title', job.title, 'text'); };
+    tdTitle.appendChild(titleSpan);
+    if(job.notes) {
+      const noteDiv = document.createElement('div');
+      noteDiv.className = 'td-note editable';
+      noteDiv.title = 'Cliquer pour modifier les notes';
+      noteDiv.innerHTML = esc(job.notes.slice(0,65))+(job.notes.length>65?'…':'')+'<span class="edit-hint">✎</span>';
+      noteDiv.onclick = () => activateInlineEdit(noteDiv, job.id, 'notes', job.notes, 'text');
+      tdTitle.appendChild(noteDiv);
+    } else {
+      const noteAdd = document.createElement('div');
+      noteAdd.style.cssText = 'font-size:11px;color:#ccc;margin-top:3px;cursor:pointer';
+      noteAdd.textContent = '+ note';
+      noteAdd.onclick = () => activateInlineEdit(noteAdd, job.id, 'notes', '', 'text');
+      tdTitle.appendChild(noteAdd);
+    }
+
+    // Colonne date ajout (non-éditable, générée auto)
+    const tdDateAdded = document.createElement('td');
+    tdDateAdded.className = 'td-date';
+    tdDateAdded.style.color = '#ccc';
+    tdDateAdded.textContent = fmt(job.dateAdded) || '—';
+
+    // Colonne statut
+    const tdStatus = document.createElement('td');
+    const sel = document.createElement('select');
+    sel.className = 'status-select';
+    sel.style.background = st.bg; sel.style.color = st.t;
+    sel.dataset.id = job.id;
+    STATUSES.forEach(s => { const o=document.createElement('option'); o.value=s.key; o.textContent=s.label; if(s.key===job.status)o.selected=true; sel.appendChild(o); });
+    sel.onchange = () => updateStatus(sel);
+    tdStatus.appendChild(sel);
+
+    // Colonne actions
+    const tdActions = document.createElement('td');
+    tdActions.className = 'td-actions';
+    tdActions.innerHTML = `<button class="action-btn" onclick="startEdit('${job.id}')" title="Modifier tout">✏️</button><button class="action-btn" onclick="deleteJob('${job.id}')" title="Supprimer">🗑</button>`;
+
+    tr.appendChild(tdTitle);
+    tr.appendChild(makeEditableCell(job.company, 'company', 'td-company'));
+    tr.appendChild(makeEditableCell(job.city, 'city'));
+    // Contrat — select inline
+    const tdContract = document.createElement('td');
+    const CONTRACT_OPTS = ['','CDI','CDD','Freelance','Stage','Alternance','Intérim'];
+    const CONTRACT_LABELS = {'':'—','CDI':'CDI','CDD':'CDD','Freelance':'Freelance','Stage':'Stage','Alternance':'Alternance','Intérim':'Intérim'};
+    const CONTRACT_COLORS = {'CDI':'#c8f5d8','CDD':'#c8dff5','Freelance':'#e0c8f5','Stage':'#f5e6c8','Alternance':'#f5d8c8','Intérim':'#e8e8e8','':'#f0ece4'};
+    const cSel = document.createElement('select');
+    cSel.className = 'status-select';
+    cSel.style.background = CONTRACT_COLORS[job.contract||''] || '#f0ece4';
+    cSel.style.color = '#444';
+    CONTRACT_OPTS.forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=CONTRACT_LABELS[v]; if(v===(job.contract||''))o.selected=true; cSel.appendChild(o); });
+    cSel.onchange = () => {
+      const v = cSel.value;
+      jobs=jobs.map(j=>j.id===job.id?{...j,contract:v}:j); save(jobs);
+      cSel.style.background = CONTRACT_COLORS[v]||'#f0ece4';
+    };
+    tdContract.appendChild(cSel);
+    tr.appendChild(tdContract);
+    tr.appendChild(makeEditableCell(job.salary, 'salary'));
+    tr.appendChild(tdDateAdded);
+    tr.appendChild(makeDateCell(job.dateApplied, 'dateApplied'));
+    tr.appendChild(makeDateCell(job.dateResponse, 'dateResponse'));
+    tr.appendChild(tdStatus);
+    tr.appendChild(tdActions);
+    tbody.appendChild(tr);
+  });
+}
+
+// ============================================================
+// INLINE EDITING
+// ============================================================
+function activateInlineEdit(container, jobId, field, currentValue, type) {
+  // Éviter double activation
+  if(container.querySelector('.inline-input')) return;
+
+  const original = container.innerHTML;
+  const input = document.createElement('input');
+  input.className = 'inline-input';
+  input.type = type;
+  input.value = currentValue || '';
+  if(type === 'date' && currentValue) input.value = currentValue; // already YYYY-MM-DD
+  container.innerHTML = '';
+  container.appendChild(input);
+  input.focus();
+  if(type === 'text') input.select();
+
+  function commit() {
+    const newVal = input.value.trim();
+    if(newVal !== (currentValue||'')) {
+      jobs = jobs.map(j => j.id===jobId ? {...j, [field]: newVal} : j);
+      save(jobs);
+      notify('Mis à jour ✓');
+      renderStats();
+    }
+    renderTable();
+  }
+
+  function cancel() { container.innerHTML = original; }
+
+  input.onblur = commit;
+  input.onkeydown = (e) => {
+    if(e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if(e.key === 'Escape') { input.onblur = null; cancel(); }
+  };
+}
+
+function esc(s) { if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(d) { if(!d) return ''; try { const [y,m,dd]=d.split('-'); return dd+'/'+m+'/'+y; } catch { return d; } }
+
+function updateStatus(sel) {
+  const id=sel.dataset.id; const st=sel.value;
+  jobs=jobs.map(j=>j.id===id?{...j,status:st}:j); save(jobs);
+  const s=ST[st]||STATUSES[0]; sel.style.background=s.bg; sel.style.color=s.t;
+  renderStats();
+}
+
+// ============================================================
+// ADD / EDIT
+// ============================================================
+function startAdd(prefill) {
+  editingId=null;
+  document.getElementById('form-title').textContent='Nouvelle offre';
+  ['title','company','city','salary','url','notes','dateApplied','dateResponse','jobDescription'].forEach(k=>{ document.getElementById('f-'+k).value=prefill&&prefill[k]?prefill[k]:''; });
+  document.getElementById('f-contract').value=prefill&&prefill.contract?prefill.contract:'';
+  buildStatusPicker(prefill&&prefill.status?prefill.status:'bookmarked');
+  showView('form');
+}
+
+function startEdit(id) {
+  editingId=id;
+  const j=jobs.find(x=>x.id===id); if(!j) return;
+  document.getElementById('form-title').textContent='Modifier l\'offre';
+  ['title','company','city','salary','url','notes','dateApplied','dateResponse','jobDescription'].forEach(k=>{ document.getElementById('f-'+k).value=j[k]||''; });
+  document.getElementById('f-contract').value=j.contract||'';
+  buildStatusPicker(j.status||'bookmarked');
+  showView('form');
+}
+
+function cancelForm() { editingId=null; showView('tracker'); }
+
+function submitForm() {
+  const title=document.getElementById('f-title').value.trim();
+  const company=document.getElementById('f-company').value.trim();
+  if(!title||!company){ notify('Le poste et l\'entreprise sont obligatoires.','err'); return; }
+  const data={title,company,city:document.getElementById('f-city').value.trim(),contract:document.getElementById('f-contract').value,salary:document.getElementById('f-salary').value.trim(),url:document.getElementById('f-url').value.trim(),notes:document.getElementById('f-notes').value.trim(),jobDescription:document.getElementById('f-jobDescription').value.trim(),dateApplied:document.getElementById('f-dateApplied').value,dateResponse:document.getElementById('f-dateResponse').value,status:getSelectedStatus()};
+  if(editingId){
+    jobs=jobs.map(j=>j.id===editingId?{...j,...data}:j);
+    notify('Offre mise à jour ✓');
+  } else {
+    jobs=[{...data,id:Date.now().toString(),dateAdded:new Date().toISOString().slice(0,10)},...jobs];
+    notify('Offre enregistrée ✓');
+  }
+  save(jobs); editingId=null; showView('tracker');
+}
+
+function deleteJob(id) {
+  if(!confirm('Supprimer cette offre ?')) return;
+  jobs=jobs.filter(j=>j.id!==id); save(jobs); notify('Offre supprimée'); renderStats(); renderTable();
+}
+
+// ============================================================
+// PENDING IMPORT (from bookmarklet via URL params)
+// ============================================================
+function checkPending() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if(!params.get('imp')) return;
+    // Clean the URL so refresh doesn't re-import
+    window.history.replaceState({}, '', window.location.pathname);
+    const data = {
+      title:          decodeURIComponent(params.get('title')          || ''),
+      company:        decodeURIComponent(params.get('company')        || ''),
+      city:           decodeURIComponent(params.get('city')           || ''),
+      salary:         decodeURIComponent(params.get('salary')         || ''),
+      contract:       decodeURIComponent(params.get('contract')       || ''),
+      url:            decodeURIComponent(params.get('url')            || ''),
+      jobDescription: decodeURIComponent(params.get('jobDescription') || ''),
+    };
+    pendingImport = data;
+    const banner = document.getElementById('import-banner');
+    banner.style.display = 'flex';
+    document.getElementById('import-desc').textContent =
+      `"${data.title||'?'}" chez ${data.company||'?'}${data.city?' · '+data.city:''} — Vérifie et enregistre.`;
+  } catch(e) {}
+}
+
+function confirmImport() {
+  if(!pendingImport) return;
+  startAdd({...pendingImport, status:'bookmarked'});
+  document.getElementById('import-banner').style.display='none';
+  pendingImport=null;
+}
+
+// ============================================================
+// BOOKMARKLET GENERATOR
+// ============================================================
+function generateBookmarklet() {
+  const trackerUrl = window.location.href.split('#')[0].split('?')[0];
+
+  // NEW APPROACH: bookmarklet only READS the page (allowed even with CSP)
+  // then opens the tracker with data in the URL — no DOM injection at all.
+  const code = `(function(){
+try{
+var D=document,loc=location.href,host=location.hostname;
+var d={url:loc,title:'',company:'',city:'',salary:'',contract:'',jobDescription:''};
+function txt(sels){var a=sels.split?[sels]:sels;for(var i=0;i<a.length;i++){try{var e=D.querySelector(a[i]);if(e){var t=(e.innerText||e.textContent||'').trim();if(t)return t;}}catch(ex){}}return '';}
+function meta(n){var e=D.querySelector('meta[property="'+n+'"],meta[name="'+n+'"]');return e?e.getAttribute('content'):'';}
+function normSalary(s){
+  if(!s)return '';
+  s=s.replace(/\\u20ACK/gi,'k\\u20AC').replace(/K\\u20AC/gi,'k\\u20AC');
+  s=s.replace('[/]yr','[/]an').replace('[/]year','[/]an').replace('[/]month','[/]mois');
+  s=s.replace('/yr','/an').replace('/year','/an').replace('/month','/mois').replace('/mo ','/mois ');
+  var si=s.indexOf('\\u2013')>=0?s.indexOf('\\u2013'):s.indexOf(' - ');
+  if(si>0){var p1=s.slice(0,si).trim(),p2=s.slice(si+1).trim();if(/\\d/.test(p1)&&/\\d/.test(p2))return p1+' \\u2013 '+p2;}
+  var m=s.match(/\\d[\\d\\s,.]*\\s*k?\\u20AC\\S*/i);
+  return m?m[0].trim().slice(0,60):s.trim().slice(0,60);
+}
+function mapContract(s){
+  if(!s)return '';
+  s=s.toLowerCase();
+  if(s.indexOf('freelance')>=0||s.indexOf('contractor')>=0)return 'Freelance';
+  if(s.indexOf('intern')>=0||s.indexOf('stage')>=0)return 'Stage';
+  if(s.indexOf('alternance')>=0||s.indexOf('apprenti')>=0)return 'Alternance';
+  if(s.indexOf('interim')>=0||s.indexOf('int\\u00e9rim')>=0||s.indexOf('temporary')>=0)return 'Int\\u00e9rim';
+  if(s.indexOf('cdd')>=0||s.indexOf('fixed-term')>=0)return 'CDD';
+  if(s.indexOf('cdi')>=0||s.indexOf('full-time')>=0||s.indexOf('permanent')>=0)return 'CDI';
+  return '';
+}
+if(host.indexOf('linkedin.com')>=0){
+  d.title=txt(['h1[class*="job-details-jobs-unified-top-card__job-title"]','h1.t-24','h1.t-bold','h1']);
+  d.company=txt(['.topcard__org-name-link','.job-details-jobs-unified-top-card__company-name','[class*="topcard__org"]']);
+  if(!d.company){var pts=D.title.split('|');if(pts.length>=2)d.company=pts[pts.length-2].trim();}
+  d.city=txt(['.job-details-jobs-unified-top-card__bullet','.topcard__flavor--bullet']);
+  var rs=txt(['[class*="salary"]','[class*="compensation"]']);
+  if(!rs){var mm=D.body.innerText.match(/\\d[\\d\\s,.]*\\s*[k\\u20AC][\\u20ACk\\w]*/i);if(mm)rs=mm[0];}
+  if(rs)d.salary=normSalary(rs);
+  d.contract=mapContract(txt(['[class*="employment-type"]','.job-details-jobs-unified-top-card__job-insight']));
+  d.jobDescription=txt(['.jobs-description__content','[class*="jobs-description"]','#job-details']);
+}
+else if(host.indexOf('indeed.')>=0){
+  d.title=txt(['[data-testid="jobsearch-JobInfoHeader-title"] span','h1[class*="jobTitle"]','h1']);
+  d.company=txt(['[data-testid="inlineHeader-companyName"] a','[data-testid="inlineHeader-companyName"]','[class*="companyName"]']);
+  d.city=txt(['[data-testid="job-location"]','[data-testid="inlineHeader-companyLocation"]']);
+  var rs=txt(['[id*="salaryInfoAndJobType"]','[data-testid*="salary"]']);
+  if(rs)d.salary=normSalary(rs);
+  d.contract=mapContract(txt(['[class*="jobType"]','[data-testid*="jobType"]']));
+  d.jobDescription=txt(['#jobDescriptionText','[data-testid="jobDescription"]']);
+}
+else if(host.indexOf('welcometothejungle')>=0){
+  var ws=loc.match(/[/]companies[/]([^/]+)[/]/);
+  if(ws)d.company=ws[1].replace(/-+/g,' ').replace(/(^\\w|\\s\\w)/g,function(c){return c.toUpperCase();});
+  var wc=loc.match(/[/]jobs[/][^_]+_([a-z][a-z0-9-]*)(\\?|$)/i);
+  if(wc)d.city=wc[1].replace(/-+/g,' ').replace(/(^\\w|\\s\\w)/g,function(c){return c.toUpperCase();});
+  var wt=(D.title||'').split('|')[0].trim();
+  var wg=wt.split(' - ');
+  if(wg.length>=1)d.title=wg[0].trim();
+  var wcr=/\\b(CDI|CDD|Alternance|Stage|Freelance|Int.rim|VIE)\\b/i;
+  for(var wi=0;wi<wg.length;wi++){var wcm=wg[wi].match(wcr);if(wcm&&!d.contract){d.contract=mapContract(wcm[1]);break;}}
+  if(!d.contract){var wb=(D.body.innerText||'').slice(0,3000).match(wcr);if(wb)d.contract=mapContract(wb[1]);}
+  if(!d.city)d.city=txt(['[data-testid="job-location"]','[class*="Location"]']);
+  var wsm=(D.body.innerText||'').match(/(Salaire|R.mun.ration)\\s*:\\s*([^\\n]{3,60})/i);
+  if(wsm&&wsm[2].trim()!='Non sp\\u00e9cifi\\u00e9')d.salary=normSalary(wsm[2]);
+  d.jobDescription=txt(['[data-testid="job-description"]','[class*="JobDescription"]','[class*="job-description"]']);
+}
+else if(host.indexOf('francetravail.fr')>=0||host.indexOf('pole-emploi.fr')>=0){
+  d.title=txt(['h1[itemprop="title"]','.offre-title h1','h1']);
+  d.company=txt(['[itemprop="hiringOrganization"] [itemprop="name"]','.enterprise-name']);
+  d.city=txt(['[itemprop="addressLocality"]','.offre-lieuTravail']);
+  var rs=txt(['[itemprop="baseSalary"]','.offre-salaire-detail']);if(rs)d.salary=normSalary(rs);
+  d.contract=mapContract(txt(['.offre-nature-contrat','.typeContrat']));
+  d.jobDescription=txt(['.description-offre','[itemprop="description"]']);
+}
+else if(host.indexOf('apec.fr')>=0){
+  d.title=txt(['h1[class*="title"]','h1']);
+  d.company=txt(['.company-name','[class*="company"]']);
+  d.city=txt(['.job-location','[class*="location"]']);
+  var rs=txt(['[class*="remuneration"]','[class*="salary"]']);if(rs)d.salary=normSalary(rs);
+  d.contract=mapContract(txt(['[class*="contract"]','[class*="contrat"]']));
+  d.jobDescription=txt(['[class*="job-description"]','[itemprop="description"]']);
+}
+else if(host.indexOf('cadremploi.fr')>=0){
+  d.title=txt(['h1.title-offer','h1']);
+  d.company=txt(['.company-name','[class*="company"]']);
+  d.city=txt(['.job-location','.localisation']);
+  var rs=txt(['[class*="remuneration"]','[class*="salary"]']);if(rs)d.salary=normSalary(rs);
+  d.contract=mapContract(txt(['[class*="contract"]','[class*="type-offre"]']));
+  d.jobDescription=txt(['[class*="description"]','[class*="job-content"]']);
+}
+else if(host.indexOf('hellowork.com')>=0){
+  d.title=txt(['h1[class*="title"]','h1']);
+  d.company=txt(['[class*="company"]','[class*="employer"]']);
+  d.city=txt(['[class*="location"]','[class*="city"]']);
+  d.contract=mapContract(txt(['[class*="contract"]','[class*="contrat"]']));
+  d.jobDescription=txt(['[class*="description"]','[class*="job-content"]']);
+}
+if(!d.title)d.title=meta('og:title')||txt('h1')||D.title||'';
+if(!d.company)d.company=meta('og:site_name')||'';
+if(!d.city){var el=D.querySelector('[class*="location"],[class*="city"],[class*="ville"]');if(el)d.city=(el.innerText||'').trim();}
+if(!d.salary){var ms=D.body.innerText.match(/\\d[\\d\\s,.]*\\s*k?\\u20AC\\S*/i);if(ms)d.salary=normSalary(ms[0]);}
+['title','company','city','salary'].forEach(function(k){if(d[k])d[k]=d[k].replace(/\\s+/g,' ').trim().slice(0,200);});
+if(d.jobDescription)d.jobDescription=d.jobDescription.replace(/\\s+/g,' ').trim().slice(0,8000);
+var q='?imp=1&title='+encodeURIComponent(d.title)+'&company='+encodeURIComponent(d.company)+'&city='+encodeURIComponent(d.city)+'&salary='+encodeURIComponent(d.salary)+'&contract='+encodeURIComponent(d.contract)+'&url='+encodeURIComponent(d.url)+'&jobDescription='+encodeURIComponent(d.jobDescription);
+window.open('${trackerUrl}'+q,'_blank');
+}catch(e){window.open('${trackerUrl}?imp=1&url='+encodeURIComponent(location.href),'_blank');}
+})();`;
+
+  const bookmarkletHref = 'javascript:' + encodeURIComponent(code);
+  document.getElementById('bm-link').href = bookmarkletHref;
+  document.getElementById('bm-code').textContent = bookmarkletHref;
+  document.getElementById('bm-generated').style.display = 'block';
+  notify('Bookmarklet généré ! Glisse-le dans ta barre de favoris.');
+}
+
+function copyBmCode() {
+  const code = document.getElementById('bm-code').textContent;
+  navigator.clipboard.writeText(code).then(()=>notify('Code copié !'));
+}
+
+// ============================================================
+// CSV EXPORT / IMPORT
+// ============================================================
+const CSV_FIELDS  = ['title','company','city','contract','salary','status','dateAdded','dateApplied','dateResponse','url','notes','jobDescription'];
+const CSV_HEADERS = ['Poste','Entreprise','Ville','Contrat','Salaire','Statut','Date ajout','Date candidature','Date réponse','Lien','Notes','Descriptif annonce'];
+
+function csvEscape(v) {
+  if(!v) return '';
+  v = String(v);
+  // Si contient virgule, guillemet ou saut de ligne → entourer de guillemets
+  if(v.includes('"') || v.includes(',') || v.includes('\n')) {
+    return '"' + v.replace(/"/g, '""') + '"';
+  }
+  return v;
+}
+
+function exportCSV() {
+  if(!jobs.length){ notify('Aucune offre à exporter.','err'); return; }
+  const rows = [CSV_HEADERS.join(',')];
+  jobs.forEach(j => {
+    rows.push(CSV_FIELDS.map(f => csvEscape(j[f]||'')).join(','));
+  });
+  const blob = new Blob(['\uFEFF'+rows.join('\n')], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'candidatures_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  notify('Export téléchargé ✓ ('+jobs.length+' offres)');
+}
+
+function importCSV(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const text = e.target.result.replace(/^\uFEFF/,''); // retire le BOM si présent
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      if(lines.length < 2){ notify('CSV vide ou invalide.','err'); return; }
+
+      // Détecte les colonnes depuis l'en-tête
+      const sep = lines[0].includes(';') ? ';' : ',';
+      const headers = parseCSVLine(lines[0], sep).map(h => h.trim().toLowerCase());
+
+      // Mapping en-tête FR/EN → clé interne
+      const HEADER_MAP = {
+        'poste':'title','titre':'title','title':'title','job title':'title',
+        'entreprise':'company','company':'company','société':'company',
+        'ville':'city','city':'city','location':'city',
+        'contrat':'contract','contract':'contract','type de contrat':'contract',
+        'salaire':'salary','salary':'salary','rémunération':'salary',
+        'statut':'status','status':'status',
+        'date ajout':'dateAdded','date added':'dateAdded',
+        'date candidature':'dateApplied','date applied':'dateApplied','date de candidature':'dateApplied',
+        'date réponse':'dateResponse','date response':'dateResponse','date de réponse':'dateResponse',
+        'lien':'url','url':'url','link':'url',
+        'notes':'notes','note':'notes','commentaires':'notes'
+      };
+
+      const colMap = headers.map(h => HEADER_MAP[h] || null);
+      const hasTitle = colMap.includes('title');
+      const hasCompany = colMap.includes('company');
+      if(!hasTitle && !hasCompany){ notify('Colonnes "Poste" et "Entreprise" introuvables dans le CSV.','err'); return; }
+
+      let imported = 0, skipped = 0, merged = 0;
+      const existingUrls = new Set(jobs.map(j=>j.url).filter(Boolean));
+      const existingKeys = new Set(jobs.map(j=>(j.title+'|'+j.company).toLowerCase()));
+
+      const newJobs = [...jobs];
+      for(let i=1; i<lines.length; i++){
+        const vals = parseCSVLine(lines[i], sep);
+        if(!vals.length) continue;
+        const obj = {};
+        colMap.forEach((key,idx) => { if(key) obj[key] = (vals[idx]||'').trim(); });
+        if(!obj.title && !obj.company){ skipped++; continue; }
+
+        // Évite les doublons (même URL ou même poste+entreprise)
+        const key = (obj.title+'|'+obj.company).toLowerCase();
+        if((obj.url && existingUrls.has(obj.url)) || existingKeys.has(key)){ merged++; continue; }
+
+        obj.id = obj.id || (Date.now() + i).toString();
+        if(!obj.dateAdded) obj.dateAdded = new Date().toISOString().slice(0,10);
+        if(!obj.status) obj.status = 'bookmarked';
+        newJobs.push(obj);
+        existingUrls.add(obj.url);
+        existingKeys.add(key);
+        imported++;
+      }
+
+      jobs = newJobs;
+      save(jobs);
+      renderStats(); renderTable();
+      let msg = imported+' offre'+(imported>1?'s':'')+' importée'+(imported>1?'s':'')+' ✓';
+      if(merged) msg += ' · '+merged+' doublon'+(merged>1?'s':'')+' ignoré'+(merged>1?'s':'');
+      if(skipped) msg += ' · '+skipped+' ligne'+(skipped>1?'s':'')+' vide'+(skipped>1?'s':'');
+      notify(msg);
+    } catch(err) {
+      notify('Erreur lors de la lecture du CSV.','err');
+    }
+    event.target.value = ''; // reset pour permettre un re-import du même fichier
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSVLine(line, sep) {
+  const result = []; let cur = ''; let inQ = false;
+  for(let i=0; i<line.length; i++){
+    const c = line[i];
+    if(c==='"'){ if(inQ && line[i+1]==='"'){ cur+='"'; i++; } else { inQ=!inQ; } }
+    else if(c===sep && !inQ){ result.push(cur); cur=''; }
+    else cur+=c;
+  }
+  result.push(cur);
+  return result;
+}
+// ============================================================
+document.getElementById('btn-add').addEventListener('click', ()=>{ startAdd(); });
+
+showView('tracker');
+
+// Check for import data in localStorage on load
+setTimeout(checkPending, 300);
+</script>
+</body>
+</html>
