@@ -79,6 +79,16 @@
   .status-select { border: none; border-radius: 12px; padding: 3px 8px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; }
   .td-actions { white-space: nowrap; }
   .action-btn { background: none; border: none; cursor: pointer; font-size: 14px; padding: 3px 5px; opacity: .7; transition: opacity .15s; }
+
+  .action-btn.gen-btn { color: #2a7a5a; font-size: 15px; }
+  .action-btn.gen-btn:hover { opacity: 1; transform: scale(1.15); }
+  .action-btn.gen-btn.loading { animation: spin 1s linear infinite; display:inline-block; }
+  @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  .gen-link { display:block;padding:10px 16px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;margin-bottom:10px;border:1px solid;transition:opacity .15s; }
+  .gen-link:hover { opacity:.8; }
+  .gen-link.cv  { background:#eaf4ff;color:#1a4a8a;border-color:#c0d8f5; }
+  .gen-link.lm  { background:#eaf8f2;color:#1a6a4a;border-color:#a8dcc8; }
+
   .action-btn:hover { opacity: 1; }
 
   /* INLINE EDITING */
@@ -185,6 +195,7 @@
     <button class="nav-btn active" onclick="showView('tracker')" id="btn-tracker">📋 Mes candidatures</button>
     <button class="nav-btn" onclick="showView('add')" id="btn-add">+ Ajouter</button>
     <button class="nav-btn" onclick="showView('bm')" id="btn-bm">🔖 Bookmarklet</button>
+    <button class="nav-btn" onclick="showView('settings')" id="btn-settings">⚙️ Paramètres</button>
   </nav>
 </header>
 
@@ -350,6 +361,38 @@
     </div>
   </div>
 
+  <!-- SETTINGS PANEL -->
+  <div id="settings-panel" style="display:none">
+    <p class="panel-title">Paramètres</p>
+    <div class="form-card" style="max-width:640px">
+      <div class="field" style="margin-bottom:20px">
+        <label>URL de la Web App Google Apps Script</label>
+        <input type="url" id="webapp-url" placeholder="https://script.google.com/macros/s/…/exec"
+               style="font-size:12px;font-family:monospace"
+               oninput="saveWebAppUrl()">
+        <p style="font-size:13px;margin-top:12px;line-height:1.5">
+          Déploie ton script Apps Script comme <strong>Web App</strong>, puis colle l'URL ici.<br>
+          Elle sera utilisée par le bouton 🌟 de chaque ligne pour générer CV + lettre.
+        </p>
+      </div>
+      <div id="webapp-status" style="font-size:12px;padding:8px 12px;border-radius:6px;display:none"></div>
+      <div style="margin-top:20px">
+        <button class="bm-btn" onclick="testWebApp()">
+        Tester la connexion
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL RÉSULTAT GÉNÉRATION -->
+  <div id="gen-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:14px;padding:32px 36px;max-width:500px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.25);position:relative">
+      <button onclick="document.getElementById('gen-modal').style.display='none'"
+              style="position:absolute;top:14px;right:18px;background:none;border:none;font-size:20px;cursor:pointer;color:#aaa">✕</button>
+      <div id="gen-modal-body"></div>
+    </div>
+  </div>
+
 </main>
 
 <script>
@@ -395,7 +438,7 @@ function notify(msg, type='ok') {
 // VIEWS
 // ============================================================
 function showView(v) {
-  ['tracker','form','bm'].forEach(id => {
+  ['tracker','form','bm','settings'].forEach(id => {
     document.getElementById(id+'-panel').style.display = 'none';
     const btn = document.getElementById('btn-'+id);
     if(btn) btn.classList.remove('active');
@@ -587,7 +630,7 @@ function renderTable() {
     // Colonne actions
     const tdActions = document.createElement('td');
     tdActions.className = 'td-actions';
-    tdActions.innerHTML = `<button class="action-btn" onclick="startEdit('${job.id}')" title="Modifier tout">✏️</button><button class="action-btn" onclick="deleteJob('${job.id}')" title="Supprimer">🗑</button>`;
+    tdActions.innerHTML = `<button class="action-btn gen-btn" onclick="generateCvLm('${job.id}')" title="Générer CV + Lettre de motivation (Apps Script)">🌟</button><button class="action-btn" onclick="startEdit('${job.id}')" title="Modifier tout">✏️</button><button class="action-btn" onclick="deleteJob('${job.id}')" title="Supprimer">🗑</button>`;
 
     // Checkbox de sélection
     const tdCheck = document.createElement('td');
@@ -698,7 +741,14 @@ function startEdit(id) {
   showView('form');
 }
 
-function cancelForm() { editingId=null; showView('tracker'); }
+function cancelForm() { editingId=null; showView('tracker');
+
+// Charger l'URL sauvegardée dans le champ settings
+(function(){
+  const saved = localStorage.getItem('jt_webapp_url');
+  const input = document.getElementById('webapp-url');
+  if(saved && input) input.value = saved;
+})(); }
 
 function submitForm() {
   const title=document.getElementById('f-title').value.trim();
@@ -1036,6 +1086,119 @@ function parseCSVLine(line, sep) {
   result.push(cur);
   return result;
 }
+
+// ============================================================
+// GÉNÉRATION CV + LETTRE VIA APPS SCRIPT
+// ============================================================
+const WEBAPP_KEY = 'jt_webapp_url';
+
+function saveWebAppUrl() {
+  const url = document.getElementById('webapp-url').value.trim();
+  localStorage.setItem(WEBAPP_KEY, url);
+  const st = document.getElementById('webapp-status');
+  if (url) {
+    st.style.display = 'block';
+    st.style.cssText = 'display:block;font-size:12px;padding:8px 12px;border-radius:6px;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
+    st.textContent = '✓ URL enregistrée';
+  } else {
+    st.style.display = 'none';
+  }
+}
+
+function testWebApp() {
+  const url = localStorage.getItem(WEBAPP_KEY);
+  const st = document.getElementById('webapp-status');
+  if (!url) {
+    st.style.cssText = 'display:block;font-size:12px;padding:8px 12px;border-radius:6px;background:#fde8e8;color:#7a1e1e;border:1px solid #dca8a8';
+    st.textContent = '⚠ Aucune URL renseignée';
+    return;
+  }
+  st.style.cssText = 'display:block;font-size:12px;padding:8px 12px;border-radius:6px;background:#fff8e1;color:#6d4c00;border:1px solid #ffe082';
+  st.textContent = '⏳ Test en cours…';
+  // On envoie un POST minimal pour vérifier que la Web App répond
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: '__test__', company: '__test__', description: '' })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.status === 'success' || data.cvUrl) {
+      st.style.cssText = 'display:block;font-size:12px;padding:8px 12px;border-radius:6px;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7';
+      st.textContent = '✓ Connexion OK — la Web App répond correctement';
+    } else {
+      st.style.cssText = 'display:block;font-size:12px;padding:8px 12px;border-radius:6px;background:#fde8e8;color:#7a1e1e;border:1px solid #dca8a8';
+      st.textContent = '⚠ La Web App a répondu mais avec une erreur : ' + (data.message || JSON.stringify(data));
+    }
+  })
+  .catch(err => {
+    st.style.cssText = 'display:block;font-size:12px;padding:8px 12px;border-radius:6px;background:#fde8e8;color:#7a1e1e;border:1px solid #dca8a8';
+    st.textContent = '✕ Erreur réseau : ' + err.message;
+  });
+}
+
+function generateCvLm(jobId) {
+  const webAppUrl = localStorage.getItem(WEBAPP_KEY);
+  if (!webAppUrl) {
+    notify('Configure d`abord l`URL Apps Script dans Paramètres', 'err');
+    showView('settings');
+    return;
+  }
+
+  const job = jobs.find(j => j.id === jobId);
+  if (!job) return;
+
+  // Indiquer le chargement sur le bouton
+  const btn = document.querySelector(`.gen-btn[onclick*="${jobId}"]`);
+  if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+
+  fetch(webAppUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title:       job.title       || '',
+      company:     job.company     || '',
+      description: job.jobDescription || job.notes || ''
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (btn) { btn.textContent = '✨'; btn.disabled = false; }
+    if (data.status === 'success') {
+      showGenModal(job, data);
+    } else {
+      notify('Erreur Apps Script : ' + (data.message || 'Réponse inattendue'), 'err');
+    }
+  })
+  .catch(err => {
+    if (btn) { btn.textContent = '✨'; btn.disabled = false; }
+    notify('Erreur réseau : ' + err.message, 'err');
+  });
+}
+
+function showGenModal(job, data) {
+  const modal = document.getElementById('gen-modal');
+  const body  = document.getElementById('gen-modal-body');
+  const profile = data.profile === 'PMM' ? '🎯 Profil PMM détecté' : '🤝 Profil CSM détecté';
+
+  body.innerHTML = `
+    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:4px">${profile}</div>
+    <h3 style="font-size:18px;color:var(--navy);margin-bottom:4px">${esc(job.title)}</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:24px">${esc(job.company)}</p>
+    <a href="${data.cvUrl}" target="_blank" rel="noopener" class="gen-link cv">
+      📄 Ouvrir le CV adapté →
+    </a>
+    <a href="${data.lmUrl}" target="_blank" rel="noopener" class="gen-link lm">
+      ✉️ Ouvrir la lettre de motivation →
+    </a>
+    <p style="font-size:11px;color:var(--muted);margin-top:16px;line-height:1.5">
+      Les deux documents ont été créés dans ton Google Drive.<br>
+      Ils commencent par la même date et le même nom d'entreprise pour les retrouver facilement.
+    </p>
+  `;
+  modal.style.display = 'flex';
+}
+
 // ============================================================
 document.getElementById('btn-add').addEventListener('click', ()=>{ startAdd(); });
 
