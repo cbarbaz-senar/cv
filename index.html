@@ -11,6 +11,7 @@
     --navy: #1a2540; --gold: #53eec0; --cream: #f7f4ee; --white: #ffffff;
     --border: #e2ddd4; --text: #2c2c2c; --muted: #8a8a8a;
     --s-book: #f5e6c8; --s-book-t: #7a5020;
+    --s-draf: #fac8f4; --s-draf-t: #b53f90;
     --s-app: #c8dff5; --s-app-t: #1a4a7a;
     --s-int: #c8f5d8; --s-int-t: #1a7a3a;
     --s-off: #e0c8f5; --s-off-t: #5a1a7a;
@@ -223,6 +224,7 @@
       <select onchange="renderTable()" id="filter-status">
         <option value="all">Tous les statuts</option>
         <option value="bookmarked">Saved</option>
+        <option value="draft">Draft</option>
         <option value="applied">Applied</option>
         <option value="interview">Interview</option>
         <option value="offer">Offer</option>
@@ -403,6 +405,7 @@ const STORAGE_KEY = 'jt_jobs_v2';
 
 const STATUSES = [
   { key:'bookmarked', label:'Saved',     bg:'var(--s-book)', t:'var(--s-book-t)' },
+  { key:'draft',      label:'Draft',     bg:'var(--s-draf)', t:'var(--s-draf-t)' },
   { key:'applied',    label:'Applied',   bg:'var(--s-app)',  t:'var(--s-app-t)'  },
   { key:'interview',  label:'Interview', bg:'var(--s-int)',  t:'var(--s-int-t)'  },
   { key:'offer',      label:'Offer',     bg:'var(--s-off)',  t:'var(--s-off-t)'  },
