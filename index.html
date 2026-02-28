@@ -1004,8 +1004,7 @@ else if(host.indexOf('francetravail.fr')>=0||host.indexOf('pole-emploi.fr')>=0){
   ftTitle=ftTitle.split('(F/H)').join('').split('(H/F)').join('').split('H/F').join('').split('F/H').join('').trim();
   d.title=ftTitle;
   var ftEmpEl=ftRoot.querySelector('[class*="entreprise"],[class*="employer"],[class*="company"],.employeur');
-  if(ftEmpEl){var ftEmpLines=(ftEmpEl.innerText||'').split('
-');d.company=ftEmpLines[0].trim();}
+  if(ftEmpEl){var ftEmpLines=(ftEmpEl.innerText||'').split(String.fromCharCode(10));d.company=ftEmpLines[0].trim();}
   var ftCityEl=ftRoot.querySelector('[class*="lieuTravail"],[class*="lieu-travail"],[itemprop="addressLocality"]');
   if(ftCityEl){
     var ftCityTxt=(ftCityEl.innerText||'').trim();
@@ -1014,16 +1013,14 @@ else if(host.indexOf('francetravail.fr')>=0||host.indexOf('pole-emploi.fr')>=0){
   }
   var ftBody=ftRoot.innerText||D.body.innerText||'';
   var ftCtrIdx=ftBody.indexOf('Type de contrat');
-  if(ftCtrIdx>=0){var ftCtrLine=ftBody.slice(ftCtrIdx+16,ftCtrIdx+60).split('
-')[0].trim();d.contract=mapContract(ftCtrLine);}
+  if(ftCtrIdx>=0){var ftCtrLine=ftBody.slice(ftCtrIdx+16,ftCtrIdx+60).split(String.fromCharCode(10))[0].trim();d.contract=mapContract(ftCtrLine);}
   var ftSalIdx=ftBody.indexOf('Salaire');
-  if(ftSalIdx>=0){var ftSalLine=ftBody.slice(ftSalIdx+8,ftSalIdx+70).split('
-')[0].trim();if(ftSalLine.indexOf('profil')<0)d.salary=normSalary(ftSalLine);}
+  if(ftSalIdx>=0){var ftSalLine=ftBody.slice(ftSalIdx+8,ftSalIdx+70).split(String.fromCharCode(10))[0].trim();if(ftSalLine.indexOf('profil')<0)d.salary=normSalary(ftSalLine);}
   var ftDescEl=ftRoot.querySelector('[class*="description"],[itemprop="description"]');
   if(ftDescEl){d.jobDescription=(ftDescEl.innerText||'').trim().slice(0,6000);}
   else{
     var ftEnd=ftBody.indexOf('Profil souhaité');
-    if(ftEnd<0)ftEnd=ftBody.indexOf('D'autres offres');
+    if(ftEnd<0)ftEnd=ftBody.indexOf('D\u2019autres offres')||ftBody.indexOf('D\'autres offres');
     if(ftEnd<0)ftEnd=ftBody.indexOf('Informations compl');
     d.jobDescription=(ftEnd>0?ftBody.slice(0,ftEnd):ftBody).trim().slice(0,6000);
   }
