@@ -993,87 +993,23 @@ else if(host.indexOf('welcometothejungle')>=0){
   d.jobDescription=txt(['[data-testid="job-description"]','[class*="JobDescription"]','[class*="job-description"]']);
 }
 else if(host.indexOf('francetravail.fr')>=0||host.indexOf('pole-emploi.fr')>=0){
-  // Nouveau site candidat.francetravail.fr — le job peut être :
-  // 1. Sur la page directe  /offres/recherche/detail/XXXXX
-  // 2. Dans le volet droit  /offres/recherche#XXXXX  (panel Angular)
-  // On cherche d'abord dans le panel s'il est ouvert, sinon dans la page entière.
-  var ftRoot=D.querySelector('[class*="detail-offre"],[class*="detailOffre"],[class*="offre-detail"],.modal-body,[role="dialog"],[role="complementary"]')||D;
-
-  // Titre : le h1 principal contient "Offre n° XXXXXX Titre" — on retire le préfixe
-  var ftH1=txt.call({},['h1.title','[class*="title-offre"]','[data-testid="job-title"]','.details-title']);
-  if(!ftH1){
-    ftH1=(ftRoot.querySelector('h1')||D.querySelector('h1')||{}).innerText||'';
-    ftH1=ftH1.replace(/^Offre\s+n[°o]?\s*\S+\s*/i,'').replace(/\s*\(.*?\)\s*$/,'').trim();
-  }
-  d.title=ftH1||'';
-
-  // Entreprise : section "Employeur" ou balise dédiée
-  d.company=txt.call({},[
-    '[class*="entreprise-name"],[class*="company-name"]',
-    '.entreprise h2,.entreprise h3',
-    '[data-testid="company-name"]'
-  ]);
-  if(!d.company){
-    // Fallback : chercher le bloc "Employeur" et prendre le h2/h3 suivant
-    var empSection=D.querySelector('.employeur,[id*="employeur"],[class*="employeur"]');
-    if(empSection)d.company=(empSection.querySelector('h2,h3,p')||{}).innerText||'';
-  }
-  if(!d.company){
-    // Dernier recours : title de page "Offre ... Titre - DEPT - VILLE - ID | France Travail"
-    var titleParts=D.title.split('|')[0].split(' - ');
-    if(titleParts.length>=3)d.company='';  // pas récupérable proprement depuis le titre
-  }
-
-  // Ville : "30 - AIMARGUES" → on nettoie le dept
-  var ftCity=txt.call({},[
-    '[class*="lieuTravail"],[class*="lieu-travail"]',
-    '[data-testid="job-location"]',
-    '[itemprop="addressLocality"]'
-  ]);
-  if(!ftCity){
-    // Chercher dans le body "XX - VILLE" pattern
-    var cityM=(D.body.innerText||'').match(/\b\d{2}\s*-\s*([A-Z][A-Z\s-]{2,30})(?=\n|\r|$)/m);
-    if(cityM)ftCity=cityM[0];
-  }
+  // Fonctionne sur l'URL directe /offres/recherche/detail/XXXXX
+  // ET sur le volet droit (panel Angular) de la page de recherche
+  var ftPanel=D.querySelector('[class*="details-offre"],[class*="detail-offre"],[class*="offreDetail"],[role="complementary"],[role="dialog"]')||D;
+  var ftH1=(ftPanel.querySelector('h1')||D.querySelector('h1')||{}).innerText||'';
+  d.title=ftH1.replace(/^Offre\s+n[°o]?\s*\S+\s*/i,'').replace(/\s*\(F\/H\)|\s*\(H\/F\)|\s*H\/F|\s*F\/H/gi,'').trim();
+  var ftEmp=ftPanel.querySelector('[class*="entreprise"],[class*="employer"],[class*="company"]');
+  d.company=ftEmp?(ftEmp.innerText||'').split('\n')[0].trim():'';
+  var ftCity=txt(['[class*="lieuTravail"],[class*="lieu-travail"]','[itemprop="addressLocality"]']);
   d.city=ftCity.replace(/^\d{2}\s*-\s*/,'').trim();
-
-  // Salaire
-  var ftSal=txt.call({},[
-    '[class*="salaire"],[class*="salary"],[itemprop="baseSalary"]',
-    '[data-testid="salary"]'
-  ]);
-  if(!ftSal){
-    var salM=(D.body.innerText||'').match(/Salaire\s*[:\n]+\s*([^\n]{3,60})/i);
-    if(salM)ftSal=salM[1];
-  }
-  if(ftSal)d.salary=normSalary(ftSal);
-
-  // Contrat : chercher "Type de contrat" puis la valeur
-  var ftCtr=txt.call({},[
-    '[class*="typeContrat"],[class*="type-contrat"],[class*="contract-type"]',
-    '[data-testid="contract-type"]'
-  ]);
-  if(!ftCtr){
-    var ctrM=(D.body.innerText||'').match(/Type\s+de\s+contrat\s*[:\n]+\s*([^\n]{2,30})/i);
-    if(ctrM)ftCtr=ctrM[1];
-  }
-  d.contract=mapContract(ftCtr);
-
-  // Description : prendre le bloc principal, éviter les offres similaires
-  d.jobDescription=txt.call({},[
-    '[class*="description-offre"],[class*="descriptionOffre"]',
-    '[itemprop="description"]',
-    '[class*="job-description"],[class*="jobDescription"]',
-    '.details-content'
-  ]);
-  if(!d.jobDescription){
-    // Fallback : tout le texte entre le titre et "Profil souhaité" ou "D'autres offres"
-    var bt=D.body.innerText||'';
-    var startIdx=bt.indexOf(ftH1||'zzzz');
-    var endIdx=bt.search(/Profil souhait[ée]|D.autres offres|Informations compl/i);
-    if(startIdx>=0&&endIdx>startIdx)d.jobDescription=bt.slice(startIdx,endIdx).trim();
-    else if(startIdx>=0)d.jobDescription=bt.slice(startIdx,startIdx+4000).trim();
-  }
+  var ftBody=ftPanel.innerText||D.body.innerText||'';
+  var ftCtrM=ftBody.match(/Type\s+de\s+contrat\s*[:\n]+\s*([^\n]{2,40})/i);
+  if(ftCtrM)d.contract=mapContract(ftCtrM[1]);
+  var ftSalM=ftBody.match(/Salaire\s*[:\n]+\s*([^\n]{3,60})/i);
+  if(ftSalM&&ftSalM[1].indexOf('profil')<0)d.salary=normSalary(ftSalM[1]);
+  var ftDesc=ftPanel.querySelector('[class*="description"],[itemprop="description"]');
+  if(ftDesc){d.jobDescription=(ftDesc.innerText||'').trim().slice(0,6000);}
+  else{var ftDEnd=ftBody.search(/Profil souhait|D.autres offres|Informations compl/i);d.jobDescription=ftDEnd>0?ftBody.slice(0,ftDEnd).trim().slice(0,6000):ftBody.trim().slice(0,4000);}
 }
 else if(host.indexOf('apec.fr')>=0){
   d.title=txt(['h1[class*="title"]','h1']);
