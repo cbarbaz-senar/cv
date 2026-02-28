@@ -1020,7 +1020,7 @@ else if(host.indexOf('francetravail.fr')>=0||host.indexOf('pole-emploi.fr')>=0){
   if(ftDescEl){d.jobDescription=(ftDescEl.innerText||'').trim().slice(0,6000);}
   else{
     var ftEnd=ftBody.indexOf('Profil souhaité');
-    if(ftEnd<0)ftEnd=ftBody.indexOf('D\u2019autres offres')||ftBody.indexOf('D\'autres offres');
+    if(ftEnd<0)ftEnd=ftBody.indexOf('autres offres similaires');
     if(ftEnd<0)ftEnd=ftBody.indexOf('Informations compl');
     d.jobDescription=(ftEnd>0?ftBody.slice(0,ftEnd):ftBody).trim().slice(0,6000);
   }
