@@ -692,6 +692,7 @@ function renderTable() {
       const v = cSel.value;
       jobs=jobs.map(j=>j.id===job.id?{...j,contract:v}:j); save(jobs);
       cSel.style.background = CONTRACT_COLORS[v]||'#f0ece4';
+      syncJobToSheet(job.id); // Sync vers Sheet
     };
     tdContract.appendChild(cSel);
     tr.appendChild(tdContract);
@@ -728,6 +729,7 @@ function activateInlineEdit(container, jobId, field, currentValue, type) {
     if(newVal !== (currentValue||'')) {
       jobs = jobs.map(j => j.id===jobId ? {...j, [field]: newVal} : j);
       save(jobs);
+      syncJobToSheet(jobId); // Sync vers Sheet
       notify('Mis à jour ✓');
       renderStats();
     }
@@ -746,21 +748,42 @@ function activateInlineEdit(container, jobId, field, currentValue, type) {
 function esc(s) { if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function fmt(d) { if(!d) return ''; try { const [y,m,dd]=d.split('-'); return dd+'/'+m+'/'+y; } catch { return d; } }
 
+// Sync un job complet vers le Sheet (fire-and-forget)
+function syncJobToSheet(jobId) {
+  const webAppUrl = localStorage.getItem(WEBAPP_KEY);
+  if (!webAppUrl) return;
+  const job = jobs.find(j => j.id === jobId);
+  if (!job) return;
+  fetch(webAppUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action:          'saveJob',
+      id:              job.id              || '',
+      title:           job.title           || '',
+      company:         job.company         || '',
+      city:            job.city            || '',
+      contract:        job.contract        || '',
+      salary:          job.salary          || '',
+      status:          job.status          || 'bookmarked',
+      dateAdded:       job.dateAdded       || '',
+      dateApplied:     job.dateApplied     || '',
+      dateResponse:    job.dateResponse    || '',
+      url:             job.url             || '',
+      notes:           job.notes           || '',
+      jobDescription:  job.jobDescription  || '',
+      cvUrl:           job.cvUrl           || '',
+      lmUrl:           job.lmUrl           || '',
+    })
+  }).catch(() => {}); // silencieux si offline
+}
+
 function updateStatus(sel) {
   const id=sel.dataset.id; const st=sel.value;
   jobs=jobs.map(j=>j.id===id?{...j,status:st}:j); save(jobs);
   const s=ST[st]||STATUSES[0]; sel.style.background=s.bg; sel.style.color=s.t;
   renderStats();
-  // Sync Sheet en arrière-plan
-  const job = jobs.find(j => j.id === id);
-  const webAppUrl = localStorage.getItem(WEBAPP_KEY);
-  if (webAppUrl && job) {
-    fetch(webAppUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'updateStatus', id: id, url: job.url || '', status: st })
-    }).catch(() => {}); // silencieux
-  }
+  syncJobToSheet(id); // Sync champ complet vers Sheet
 }
 
 // ============================================================
@@ -799,14 +822,19 @@ function submitForm() {
   const company=document.getElementById('f-company').value.trim();
   if(!title||!company){ notify('Le poste et l\'entreprise sont obligatoires.','err'); return; }
   const data={title,company,city:document.getElementById('f-city').value.trim(),contract:document.getElementById('f-contract').value,salary:document.getElementById('f-salary').value.trim(),url:document.getElementById('f-url').value.trim(),notes:document.getElementById('f-notes').value.trim(),jobDescription:document.getElementById('f-jobDescription').value.trim(),dateApplied:document.getElementById('f-dateApplied').value,dateResponse:document.getElementById('f-dateResponse').value,status:getSelectedStatus()};
+  let savedId;
   if(editingId){
     jobs=jobs.map(j=>j.id===editingId?{...j,...data}:j);
+    savedId = editingId;
     notify('Offre mise à jour ✓');
   } else {
-    jobs=[{...data,id:Date.now().toString(),dateAdded:new Date().toISOString().slice(0,10)},...jobs];
+    savedId = Date.now().toString();
+    jobs=[{...data,id:savedId,dateAdded:new Date().toISOString().slice(0,10)},...jobs];
     notify('Offre enregistrée ✓');
   }
-  save(jobs); editingId=null; showView('tracker');
+  save(jobs);
+  syncJobToSheet(savedId); // Sync vers Sheet
+  editingId=null; showView('tracker');
 }
 
 function updateDeleteBtn() {
