@@ -844,10 +844,21 @@ function updateDeleteBtn() {
   btn.textContent = `🗑 Supprimer (${count})`;
 }
 
+function archiveJobsInSheet(ids) {
+  const webAppUrl = localStorage.getItem(WEBAPP_KEY);
+  if (!webAppUrl || !ids.length) return;
+  fetch(webAppUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'deleteJob', ids: ids })
+  }).catch(() => {}); // silencieux si offline
+}
+
 function deleteSelected() {
   const ids = [...document.querySelectorAll('.row-chk:checked')].map(c => c.dataset.id);
   if(!ids.length) return;
-  if(!confirm(`Supprimer ${ids.length} offre${ids.length>1?'s':''} ?`)) return;
+  if(!confirm(`Supprimer ${ids.length} offre${ids.length>1?'s':''} ?\n\nElles seront archivées dans Google Sheets (pas effacées définitivement).`)) return;
+  archiveJobsInSheet(ids); // soft delete Sheet
   jobs = jobs.filter(j => !ids.includes(j.id));
   save(jobs);
   notify(`${ids.length} offre${ids.length>1?'s':''} supprimée${ids.length>1?'s':''} ✓`);
@@ -855,8 +866,12 @@ function deleteSelected() {
 }
 
 function deleteJob(id) {
-  if(!confirm('Supprimer cette offre ?')) return;
-  jobs=jobs.filter(j=>j.id!==id); save(jobs); notify('Offre supprimée'); renderStats(); renderTable();
+  if(!confirm('Supprimer cette offre ?\n\nElle sera archivée dans Google Sheets (pas effacée définitivement).')) return;
+  archiveJobsInSheet([id]); // soft delete Sheet
+  jobs = jobs.filter(j => j.id !== id);
+  save(jobs);
+  notify('Offre supprimée ✓');
+  renderStats(); renderTable();
 }
 
 // ============================================================
