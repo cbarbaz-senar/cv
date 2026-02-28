@@ -432,21 +432,26 @@ function save(arr) {
 // ── Chargement depuis le Sheet au démarrage ──────────────────
 function loadFromSheet() {
   const webAppUrl = localStorage.getItem(WEBAPP_KEY);
-  if (!webAppUrl) return; // pas de Web App configurée, localStorage seul
+  if (!webAppUrl) return;
 
   fetch(webAppUrl)
     .then(r => r.json())
     .then(data => {
       if (data.status !== 'success' || !data.jobs) return;
-      // Fusionner : le Sheet a priorité, localStorage comble les jobs absents du Sheet
-      const sheetIds = new Set(data.jobs.map(j => j.id));
-      const localOnly = jobs.filter(j => !sheetIds.has(j.id));
+      // Déduplication sur ID ET sur URL (les IDs Sheet peuvent différer des IDs localStorage)
+      // Le Sheet a priorité — c'est la source de vérité cloud
+      const sheetKeys = new Set(
+        data.jobs.flatMap(j => [j.id, j.url].filter(Boolean))
+      );
+      const localOnly = jobs.filter(j =>
+        !sheetKeys.has(j.id) && !(j.url && sheetKeys.has(j.url))
+      );
       jobs = [...data.jobs, ...localOnly];
       save(jobs);
       renderStats(); renderTable();
-      notify('✓ Données chargées depuis le cloud', 'ok');
+      notify('Données chargées depuis le cloud', 'ok');
     })
-    .catch(() => {}); // silencieux si offline ou erreur
+    .catch(() => {});
 }
 
 let jobs = load();
