@@ -993,24 +993,42 @@ else if(host.indexOf('welcometothejungle')>=0){
   d.jobDescription=txt(['[data-testid="job-description"]','[class*="JobDescription"]','[class*="job-description"]']);
 }
 else if(host.indexOf('francetravail.fr')>=0||host.indexOf('pole-emploi.fr')>=0){
-  // Fonctionne sur l'URL directe /offres/recherche/detail/XXXXX
-  // ET sur le volet droit (panel Angular) de la page de recherche
-  var ftPanel=D.querySelector('[class*="details-offre"],[class*="detail-offre"],[class*="offreDetail"],[role="complementary"],[role="dialog"]')||D;
-  var ftH1=(ftPanel.querySelector('h1')||D.querySelector('h1')||{}).innerText||'';
-  d.title=ftH1.replace(/^Offre\s+n[°o]?\s*\S+\s*/i,'').replace(/\s*\(F\/H\)|\s*\(H\/F\)|\s*H\/F|\s*F\/H/gi,'').trim();
-  var ftEmp=ftPanel.querySelector('[class*="entreprise"],[class*="employer"],[class*="company"]');
-  d.company=ftEmp?(ftEmp.innerText||'').split('\n')[0].trim():'';
-  var ftCity=txt(['[class*="lieuTravail"],[class*="lieu-travail"]','[itemprop="addressLocality"]']);
-  d.city=ftCity.replace(/^\d{2}\s*-\s*/,'').trim();
-  var ftBody=ftPanel.innerText||D.body.innerText||'';
-  var ftCtrM=ftBody.match(/Type\s+de\s+contrat\s*[:\n]+\s*([^\n]{2,40})/i);
-  if(ftCtrM)d.contract=mapContract(ftCtrM[1]);
-  var ftSalM=ftBody.match(/Salaire\s*[:\n]+\s*([^\n]{3,60})/i);
-  if(ftSalM&&ftSalM[1].indexOf('profil')<0)d.salary=normSalary(ftSalM[1]);
-  var ftDesc=ftPanel.querySelector('[class*="description"],[itemprop="description"]');
-  if(ftDesc){d.jobDescription=(ftDesc.innerText||'').trim().slice(0,6000);}
-  else{var ftDEnd=ftBody.search(/Profil souhait|D.autres offres|Informations compl/i);d.jobDescription=ftDEnd>0?ftBody.slice(0,ftDEnd).trim().slice(0,6000):ftBody.trim().slice(0,4000);}
+  var ftRoot=D.querySelector('[class*="detail-offre"],[class*="details-offre"],[role="dialog"],[role="complementary"]')||D;
+  var ftH1=ftRoot.querySelector('h1')||D.querySelector('h1');
+  var ftTitle=(ftH1?ftH1.innerText||'':'').trim();
+  var ftOIdx=ftTitle.indexOf(' ');
+  if(ftTitle.slice(0,5)==='Offre'&&ftOIdx>0){
+    var ftOIdx2=ftTitle.indexOf(' ',ftOIdx+1);
+    if(ftOIdx2>0)ftTitle=ftTitle.slice(ftOIdx2+1).trim();
+  }
+  ftTitle=ftTitle.split('(F/H)').join('').split('(H/F)').join('').split('H/F').join('').split('F/H').join('').trim();
+  d.title=ftTitle;
+  var ftEmpEl=ftRoot.querySelector('[class*="entreprise"],[class*="employer"],[class*="company"],.employeur');
+  if(ftEmpEl){var ftEmpLines=(ftEmpEl.innerText||'').split('
+');d.company=ftEmpLines[0].trim();}
+  var ftCityEl=ftRoot.querySelector('[class*="lieuTravail"],[class*="lieu-travail"],[itemprop="addressLocality"]');
+  if(ftCityEl){
+    var ftCityTxt=(ftCityEl.innerText||'').trim();
+    var ftDashIdx=ftCityTxt.indexOf(' - ');
+    d.city=ftDashIdx>=0?ftCityTxt.slice(ftDashIdx+3).trim():ftCityTxt;
+  }
+  var ftBody=ftRoot.innerText||D.body.innerText||'';
+  var ftCtrIdx=ftBody.indexOf('Type de contrat');
+  if(ftCtrIdx>=0){var ftCtrLine=ftBody.slice(ftCtrIdx+16,ftCtrIdx+60).split('
+')[0].trim();d.contract=mapContract(ftCtrLine);}
+  var ftSalIdx=ftBody.indexOf('Salaire');
+  if(ftSalIdx>=0){var ftSalLine=ftBody.slice(ftSalIdx+8,ftSalIdx+70).split('
+')[0].trim();if(ftSalLine.indexOf('profil')<0)d.salary=normSalary(ftSalLine);}
+  var ftDescEl=ftRoot.querySelector('[class*="description"],[itemprop="description"]');
+  if(ftDescEl){d.jobDescription=(ftDescEl.innerText||'').trim().slice(0,6000);}
+  else{
+    var ftEnd=ftBody.indexOf('Profil souhaité');
+    if(ftEnd<0)ftEnd=ftBody.indexOf('D'autres offres');
+    if(ftEnd<0)ftEnd=ftBody.indexOf('Informations compl');
+    d.jobDescription=(ftEnd>0?ftBody.slice(0,ftEnd):ftBody).trim().slice(0,6000);
+  }
 }
+  
 else if(host.indexOf('apec.fr')>=0){
   d.title=txt(['h1[class*="title"]','h1']);
   d.company=txt(['.company-name','[class*="company"]']);
