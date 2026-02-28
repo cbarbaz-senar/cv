@@ -417,8 +417,30 @@ const ST = Object.fromEntries(STATUSES.map(s=>[s.key,s]));
 function load() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
 }
-function save(jobs) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs)); } catch { notify('Erreur de sauvegarde','err'); }
+function save(arr) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); } catch { notify('Erreur de sauvegarde','err'); }
+  // Sync silencieux vers le Sheet si Web App configurée (fire-and-forget, pas d'attente)
+  // Appelé uniquement pour les ajouts/modifs manuels — les génération sont sauvées par Apps Script
+}
+
+// ── Chargement depuis le Sheet au démarrage ──────────────────
+function loadFromSheet() {
+  const webAppUrl = localStorage.getItem(WEBAPP_KEY);
+  if (!webAppUrl) return; // pas de Web App configurée, localStorage seul
+
+  fetch(webAppUrl)
+    .then(r => r.json())
+    .then(data => {
+      if (data.status !== 'success' || !data.jobs) return;
+      // Fusionner : le Sheet a priorité, localStorage comble les jobs absents du Sheet
+      const sheetIds = new Set(data.jobs.map(j => j.id));
+      const localOnly = jobs.filter(j => !sheetIds.has(j.id));
+      jobs = [...data.jobs, ...localOnly];
+      save(jobs);
+      renderStats(); renderTable();
+      notify('✓ Données chargées depuis le cloud', 'ok');
+    })
+    .catch(() => {}); // silencieux si offline ou erreur
 }
 
 let jobs = load();
@@ -633,7 +655,16 @@ function renderTable() {
     // Colonne actions
     const tdActions = document.createElement('td');
     tdActions.className = 'td-actions';
-    tdActions.innerHTML = `<button class="action-btn gen-btn" onclick="generateCvLm('${job.id}')" title="Générer CV + Lettre de motivation (Apps Script)">🌟</button><button class="action-btn" onclick="startEdit('${job.id}')" title="Modifier tout">✏️</button><button class="action-btn" onclick="deleteJob('${job.id}')" title="Supprimer">🗑</button>`;
+    const cvIcon = job.cvUrl
+      ? `<a href="${job.cvUrl}" target="_blank" rel="noopener" class="action-btn" title="Ouvrir le CV dans Drive" style="text-decoration:none">📄</a>`
+      : '';
+    const lmIcon = job.lmUrl
+      ? `<a href="${job.lmUrl}" target="_blank" rel="noopener" class="action-btn" title="Ouvrir la lettre dans Drive" style="text-decoration:none">✉️</a>`
+      : '';
+    tdActions.innerHTML = cvIcon + lmIcon +
+      `<button class="action-btn gen-btn" onclick="generateCvLm('${job.id}')" title="Générer CV + Lettre (Apps Script)">🌟</button>` +
+      `<button class="action-btn" onclick="startEdit('${job.id}')" title="Modifier tout">✏️</button>` +
+      `<button class="action-btn" onclick="deleteJob('${job.id}')" title="Supprimer">🗑</button>`;
 
     // Checkbox de sélection
     const tdCheck = document.createElement('td');
@@ -720,6 +751,16 @@ function updateStatus(sel) {
   jobs=jobs.map(j=>j.id===id?{...j,status:st}:j); save(jobs);
   const s=ST[st]||STATUSES[0]; sel.style.background=s.bg; sel.style.color=s.t;
   renderStats();
+  // Sync Sheet en arrière-plan
+  const job = jobs.find(j => j.id === id);
+  const webAppUrl = localStorage.getItem(WEBAPP_KEY);
+  if (webAppUrl && job) {
+    fetch(webAppUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'updateStatus', id: id, url: job.url || '', status: st })
+    }).catch(() => {}); // silencieux
+  }
 }
 
 // ============================================================
@@ -1159,22 +1200,37 @@ function generateCvLm(jobId) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      title:       job.title       || '',
-      company:     job.company     || '',
-      description: job.jobDescription || job.notes || ''
+      action:          'generate',
+      id:              job.id           || '',
+      title:           job.title        || '',
+      company:         job.company      || '',
+      city:            job.city         || '',
+      contract:        job.contract     || '',
+      salary:          job.salary       || '',
+      url:             job.url          || '',
+      notes:           job.notes        || '',
+      dateAdded:       job.dateAdded    || '',
+      description:     job.jobDescription || job.notes || ''
     })
   })
   .then(r => r.json())
   .then(data => {
-    if (btn) { btn.textContent = '✨'; btn.disabled = false; }
+    if (btn) { btn.textContent = '🌟'; btn.disabled = false; }
     if (data.status === 'success') {
+      // Stocker les liens docs dans le job local + passer en "draft"
+      jobs = jobs.map(j => j.id === jobId
+        ? { ...j, cvUrl: data.cvUrl, lmUrl: data.lmUrl, status: 'draft' }
+        : j
+      );
+      save(jobs);
+      renderTable(); renderStats();
       showGenModal(job, data);
     } else {
       notify('Erreur Apps Script : ' + (data.message || 'Réponse inattendue'), 'err');
     }
   })
   .catch(err => {
-    if (btn) { btn.textContent = '✨'; btn.disabled = false; }
+    if (btn) { btn.textContent = '🌟'; btn.disabled = false; }
     notify('Erreur réseau : ' + err.message, 'err');
   });
 }
@@ -1206,6 +1262,7 @@ function showGenModal(job, data) {
 document.getElementById('btn-add').addEventListener('click', ()=>{ startAdd(); });
 
 showView('tracker');
+setTimeout(loadFromSheet, 500); // Charger les données Sheet en arrière-plan
 
 // Check for import data in localStorage on load
 setTimeout(checkPending, 300);
