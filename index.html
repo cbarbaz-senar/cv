@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JOB Tracker</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%231a2540'/><circle cx='50' cy='50' r='36' fill='%23c9a84c'/><circle cx='50' cy='50' r='24' fill='%231a2540'/><circle cx='50' cy='50' r='12' fill='%23c9a84c'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🟣</text></svg>">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap');
   :root {
@@ -277,6 +277,12 @@
             <option value="Intérim">Intérim</option>
           </select>
         </div>
+        <div class="field"><label>Langue du CV</label>
+          <select id="f-lang">
+            <option value="FR">🇫🇷 Français</option>
+            <option value="EN">🇬🇧 Anglais</option>
+          </select>
+        </div>
         <div class="field"><label>Salaire / fourchette</label><input type="text" id="f-salary" placeholder="ex : 50-60k€ brut/an"></div>
         <div class="field"><label>Date de candidature</label><input type="date" id="f-dateApplied"></div>
         <div class="field"><label>Date de réponse</label><input type="date" id="f-dateResponse"></div>
@@ -317,8 +323,8 @@
         <div id="bm-generated" style="display:none">
           <div class="drag-area">
             <p style="margin-bottom:6px;font-size:13px;font-weight:600;color:#333">🌟 Glisse ce bouton dans ta barre de favoris</p>
-            <a id="bm-link" href="#" class="drag-link">Sauver l'offre</a>
-            <p>ou copie le code ci-dessous si le glisser-déposer ne fonctionne pas</p>
+            <a id="bm-link" href="#" class="drag-link">🟣JOB</a>
+            <p>ou copie le code ci-dessous si le drag & drop ne fonctionne pas</p>
           </div>
           <div class="bm-code" id="bm-code"></div>
           <button class="copy-btn" onclick="copyBmCode()">📋 Copier le code</button>
@@ -659,7 +665,7 @@ function renderTable() {
       ? `<a href="${job.cvUrl}" target="_blank" rel="noopener" class="action-btn" title="Ouvrir le CV dans Drive" style="text-decoration:none">📄</a>`
       : '';
     const lmIcon = job.lmUrl
-      ? `<a href="${job.lmUrl}" target="_blank" rel="noopener" class="action-btn" title="Ouvrir la lettre dans Drive" style="text-decoration:none">✉️</a>`
+      ? `<a href="${job.lmUrl}" target="_blank" rel="noopener" class="action-btn" title="Ouvrir la lettre dans Drive" style="text-decoration:none">📩</a>`
       : '';
     tdActions.innerHTML = cvIcon + lmIcon +
       `<button class="action-btn gen-btn" onclick="generateCvLm('${job.id}')" title="Générer CV + Lettre (Apps Script)">🌟</button>` +
@@ -774,6 +780,7 @@ function syncJobToSheet(jobId) {
       jobDescription:  job.jobDescription  || '',
       cvUrl:           job.cvUrl           || '',
       lmUrl:           job.lmUrl           || '',
+      lang:            job.lang            || 'FR',
     })
   }).catch(() => {}); // silencieux si offline
 }
@@ -794,6 +801,7 @@ function startAdd(prefill) {
   document.getElementById('form-title').textContent='Nouvelle offre';
   ['title','company','city','salary','url','notes','dateApplied','dateResponse','jobDescription'].forEach(k=>{ document.getElementById('f-'+k).value=prefill&&prefill[k]?prefill[k]:''; });
   document.getElementById('f-contract').value=prefill&&prefill.contract?prefill.contract:'';
+  document.getElementById('f-lang').value=prefill&&prefill.lang?prefill.lang:'FR';
   buildStatusPicker(prefill&&prefill.status?prefill.status:'bookmarked');
   showView('form');
 }
@@ -804,6 +812,7 @@ function startEdit(id) {
   document.getElementById('form-title').textContent='Modifier l\'offre';
   ['title','company','city','salary','url','notes','dateApplied','dateResponse','jobDescription'].forEach(k=>{ document.getElementById('f-'+k).value=j[k]||''; });
   document.getElementById('f-contract').value=j.contract||'';
+  document.getElementById('f-lang').value=j.lang||'FR';
   buildStatusPicker(j.status||'bookmarked');
   showView('form');
 }
@@ -821,7 +830,7 @@ function submitForm() {
   const title=document.getElementById('f-title').value.trim();
   const company=document.getElementById('f-company').value.trim();
   if(!title||!company){ notify('Le poste et l\'entreprise sont obligatoires.','err'); return; }
-  const data={title,company,city:document.getElementById('f-city').value.trim(),contract:document.getElementById('f-contract').value,salary:document.getElementById('f-salary').value.trim(),url:document.getElementById('f-url').value.trim(),notes:document.getElementById('f-notes').value.trim(),jobDescription:document.getElementById('f-jobDescription').value.trim(),dateApplied:document.getElementById('f-dateApplied').value,dateResponse:document.getElementById('f-dateResponse').value,status:getSelectedStatus()};
+  const data={title,company,city:document.getElementById('f-city').value.trim(),contract:document.getElementById('f-contract').value,lang:document.getElementById('f-lang').value||'FR',salary:document.getElementById('f-salary').value.trim(),url:document.getElementById('f-url').value.trim(),notes:document.getElementById('f-notes').value.trim(),jobDescription:document.getElementById('f-jobDescription').value.trim(),dateApplied:document.getElementById('f-dateApplied').value,dateResponse:document.getElementById('f-dateResponse').value,status:getSelectedStatus()};
   let savedId;
   if(editingId){
     jobs=jobs.map(j=>j.id===editingId?{...j,...data}:j);
@@ -1035,7 +1044,7 @@ function copyBmCode() {
 // ============================================================
 // CSV EXPORT / IMPORT
 // ============================================================
-const CSV_FIELDS  = ['title','company','city','contract','salary','status','dateAdded','dateApplied','dateResponse','url','notes','jobDescription'];
+const CSV_FIELDS  = ['title','company','city','contract','lang','salary','status','dateAdded','dateApplied','dateResponse','url','notes','jobDescription'];
 const CSV_HEADERS = ['Poste','Entreprise','Ville','Contrat','Salaire','Statut','Date ajout','Date candidature','Date réponse','Lien','Notes','Descriptif annonce'];
 
 function csvEscape(v) {
@@ -1253,7 +1262,8 @@ function generateCvLm(jobId) {
       url:             job.url          || '',
       notes:           job.notes        || '',
       dateAdded:       job.dateAdded    || '',
-      description:     job.jobDescription || job.notes || ''
+      description:     job.jobDescription || job.notes || '',
+      lang:            job.lang            || 'FR'
     })
   })
   .then(r => r.json())
@@ -1281,7 +1291,7 @@ function generateCvLm(jobId) {
 function showGenModal(job, data) {
   const modal = document.getElementById('gen-modal');
   const body  = document.getElementById('gen-modal-body');
-  const profile = data.profile === 'PMM' ? '🎯 Profil PMM détecté' : '🤝 Profil CSM détecté';
+  const profile = data.profile === 'PMM' ? '🎯 Profil PMM détecté' : '😊 Profil CSM détecté';
 
   body.innerHTML = `
     <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:4px">${profile}</div>
@@ -1291,7 +1301,7 @@ function showGenModal(job, data) {
       📄 Ouvrir le CV adapté →
     </a>
     <a href="${data.lmUrl}" target="_blank" rel="noopener" class="gen-link lm">
-      ✉️ Ouvrir la lettre de motivation →
+      📩 Ouvrir la lettre de motivation →
     </a>
     <p style="font-size:11px;color:var(--muted);margin-top:16px;line-height:1.5">
       Les deux documents ont été créés dans ton Google Drive.<br>
