@@ -762,7 +762,7 @@ function syncJobToSheet(jobId) {
   if (!job) return;
   fetch(webAppUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({
       action:          'saveJob',
       id:              job.id              || '',
@@ -858,7 +858,7 @@ function archiveJobsInSheet(ids) {
   if (!webAppUrl || !ids.length) return;
   fetch(webAppUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ action: 'deleteJob', ids: ids })
   }).catch(() => {}); // silencieux si offline
 }
@@ -1214,7 +1214,7 @@ function testWebApp() {
   // On envoie un POST minimal pour vérifier que la Web App répond
   fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ title: '__test__', company: '__test__', description: '' })
   })
   .then(r => r.json())
@@ -1250,7 +1250,7 @@ function generateCvLm(jobId) {
 
   fetch(webAppUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({
       action:          'generate',
       id:              job.id           || '',
