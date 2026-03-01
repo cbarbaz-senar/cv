@@ -763,7 +763,7 @@ function fmt(d) { if(!d) return ''; try { const [y,m,dd]=d.split('-'); return dd
 function syncJobToSheet(jobId) {
   const webAppUrl = localStorage.getItem(WEBAPP_KEY);
   if (!webAppUrl) return;
-  const job = jobs.find(j => j.id === jobId);
+  const job = jobs.find(j => String(j.id) === String(jobId));
   if (!job) return;
   fetch(webAppUrl, {
     method: 'POST',
@@ -1272,7 +1272,7 @@ function generateCvLm(jobId) {
     return;
   }
 
-  const job = jobs.find(j => j.id === jobId);
+  const job = jobs.find(j => String(j.id) === String(jobId));
   if (!job) return;
 
   // Indiquer le chargement sur le bouton
