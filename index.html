@@ -835,7 +835,7 @@ function submitForm() {
   const title=document.getElementById('f-title').value.trim();
   const company=document.getElementById('f-company').value.trim();
   if(!title||!company){ notify('Le poste et l\'entreprise sont obligatoires.','err'); return; }
-  const data={title,company,city:document.getElementById('f-city').value.trim(),contract:document.getElementById('f-contract').value,lang:document.getElementById('f-lang').value||'FR',salary:document.getElementById('f-salary').value.trim(),url:document.getElementById('f-url').value.trim(),notes:document.getElementById('f-notes').value.trim(),jobDescription:document.getElementById('f-jobDescription').value.trim(),dateApplied:document.getElementById('f-dateApplied').value,dateResponse:document.getElementById('f-dateResponse').value,status:getSelectedStatus()};
+  const data={title,company,city:document.getElementById('f-city').value.trim(),contract:document.getElementById('f-contract').value,lang:document.getElementById('f-lang').value||'FR',salary:document.getElementById('f-salary').value.trim(),url:cleanJobUrl(document.getElementById('f-url').value.trim()),notes:document.getElementById('f-notes').value.trim(),jobDescription:document.getElementById('f-jobDescription').value.trim(),dateApplied:document.getElementById('f-dateApplied').value,dateResponse:document.getElementById('f-dateResponse').value,status:getSelectedStatus()};
   let savedId;
   if(editingId){
     jobs=jobs.map(j=>j.id===editingId?{...j,...data}:j);
@@ -889,6 +889,28 @@ function deleteJob(id) {
 }
 
 // ============================================================
+// NETTOYAGE URL — supprime les paramètres tracking, garde l'essentiel
+// ============================================================
+function cleanJobUrl(url) {
+  if (!url) return url;
+  try {
+    const u = new URL(url);
+    // Indeed : garder uniquement jk
+    if (u.hostname.includes('indeed.com')) {
+      const jk = u.searchParams.get('jk');
+      if (jk) return 'https://' + u.hostname + '/viewjob?jk=' + jk;
+    }
+    // LinkedIn : supprimer querystring
+    if (u.hostname.includes('linkedin.com')) {
+      return u.origin + u.pathname;
+    }
+    // Autres : supprimer paramètres tracking courants
+    ['utm_source','utm_medium','utm_campaign','utm_content','utm_term',
+     'tk','rgtk','xkcb','xpse','xfps','alid','from','g1tAS'].forEach(p => u.searchParams.delete(p));
+    return u.toString();
+  } catch(e) { return url; }
+}
+
 // PENDING IMPORT (from bookmarklet via URL params)
 // ============================================================
 function checkPending() {
@@ -903,7 +925,7 @@ function checkPending() {
       city:           decodeURIComponent(params.get('city')           || ''),
       salary:         decodeURIComponent(params.get('salary')         || ''),
       contract:       decodeURIComponent(params.get('contract')       || ''),
-      url:            decodeURIComponent(params.get('url')            || ''),
+      url:            cleanJobUrl(decodeURIComponent(params.get('url') || '')),
       jobDescription: decodeURIComponent(params.get('jobDescription') || ''),
     };
     pendingImport = data;
