@@ -954,6 +954,8 @@ function generateBookmarklet() {
   const code = `(function(){
 try{
 var D=document,loc=location.href,host=location.hostname;
+// Nettoyer l'URL avant de l'encoder (supprime les paramètres tracking)
+try{var _u=new URL(loc);if(host.indexOf('indeed.')>=0){var _jk=_u.searchParams.get('jk');if(_jk)loc='https://'+host+'/viewjob?jk='+_jk;}else if(host.indexOf('linkedin.com')>=0){loc=_u.origin+_u.pathname;}else{['utm_source','utm_medium','utm_campaign','utm_content','utm_term','tk','rgtk','xkcb','xpse','xfps','alid','from','g1tAS'].forEach(function(p){_u.searchParams.delete(p);});loc=_u.toString();}}catch(eu){}
 var d={url:loc,title:'',company:'',city:'',salary:'',contract:'',jobDescription:''};
 function txt(sels){var a=sels.split?[sels]:sels;for(var i=0;i<a.length;i++){try{var e=D.querySelector(a[i]);if(e){var t=(e.innerText||e.textContent||'').trim();if(t)return t;}}catch(ex){}}return '';}
 function meta(n){var e=D.querySelector('meta[property="'+n+'"],meta[name="'+n+'"]');return e?e.getAttribute('content'):'';}
