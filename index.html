@@ -1415,8 +1415,9 @@ document.getElementById('btn-add').addEventListener('click', ()=>{ startAdd(); }
 showView('tracker');
 setTimeout(loadFromSheet, 500); // Charger les données Sheet en arrière-plan
 
-// Check for import data in localStorage on load
-setTimeout(checkPending, 300);
+// checkPending après chargement des jobs (2s pour laisser le Sheet répondre)
+// Si le Sheet est lent, on essaie quand même avec les jobs locaux déjà disponibles
+setTimeout(checkPending, 2000);
 </script>
 </body>
 </html>
