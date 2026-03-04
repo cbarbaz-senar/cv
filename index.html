@@ -1078,7 +1078,7 @@ if(!d.company)d.company=meta('og:site_name')||'';
 if(!d.city){var el=D.querySelector('[class*="location"],[class*="city"],[class*="ville"]');if(el)d.city=(el.innerText||'').trim();}
 if(!d.salary){var ms=D.body.innerText.match(/\\d[\\d\\s,.]*\\s*k?\\u20AC\\S*/i);if(ms)d.salary=normSalary(ms[0]);}
 ['title','company','city','salary'].forEach(function(k){if(d[k])d[k]=d[k].replace(/\\s+/g,' ').trim().slice(0,200);});
-if(d.jobDescription)d.jobDescription=d.jobDescription.replace(/\\s+/g,' ').trim().slice(0,8000);
+if(d.jobDescription)d.jobDescription=d.jobDescription.replace(/\\s+/g,' ').trim().slice(0,2500);
 var q='?imp=1&title='+encodeURIComponent(d.title)+'&company='+encodeURIComponent(d.company)+'&city='+encodeURIComponent(d.city)+'&salary='+encodeURIComponent(d.salary)+'&contract='+encodeURIComponent(d.contract)+'&url='+encodeURIComponent(d.url)+'&jobDescription='+encodeURIComponent(d.jobDescription);
 window.open('${trackerUrl}'+q,'_blank');
 }catch(e){window.open('${trackerUrl}?imp=1&url='+encodeURIComponent(location.href),'_blank');}
