@@ -215,15 +215,6 @@
       <button class="btn-import" onclick="confirmImport()">Enregistrer cette offre →</button>
     </div>
 
-    <div id="dup-banner" class="import-banner" style="display:none;background:linear-gradient(135deg,#3a1a1a,#6a2a2a)">
-      <div class="icon">⚠️</div>
-      <div>
-        <h3 style="color:#ffb347">Déjà dans ton tracker !</h3>
-        <p id="dup-desc">Cette offre est déjà enregistrée.</p>
-      </div>
-      <button class="btn-import" onclick="document.getElementById('dup-banner').style.display='none'" style="background:#c0392b">Fermer</button>
-    </div>
-
     <div class="stats-bar" id="stats-bar"></div>
 
     <div class="controls">
@@ -952,23 +943,6 @@ function checkPending() {
         jobDescription: decodeURIComponent(params.get('jobDescription') || ''),
       };
     }
-    // Détection de doublon
-    const dupJob = jobs.find(j => {
-      if (data.url && j.url && cleanJobUrl(j.url) === cleanJobUrl(data.url)) return true;
-      if (data.title && data.company &&
-          j.title.toLowerCase().trim() === data.title.toLowerCase().trim() &&
-          j.company.toLowerCase().trim() === data.company.toLowerCase().trim()) return true;
-      return false;
-    });
-    if (dupJob) {
-      document.getElementById('dup-banner').style.display = 'flex';
-      const dateStr = dupJob.dateAdded ? ` — ajoutée le ${dupJob.dateAdded}` : '';
-      const statusStr = dupJob.status ? ` · statut : ${dupJob.status}` : '';
-      document.getElementById('dup-desc').textContent =
-        `"${dupJob.title}" chez ${dupJob.company}${dateStr}${statusStr}`;
-      return;
-    }
-
     pendingImport = data;
     const banner = document.getElementById('import-banner');
     banner.style.display = 'flex';
@@ -1414,7 +1388,7 @@ showView('tracker');
 setTimeout(loadFromSheet, 500); // Charger les données Sheet en arrière-plan
 
 // Check for import data in localStorage on load
-setTimeout(checkPending, 2500); // Délai pour attendre le chargement des jobs depuis le Sheet
+setTimeout(checkPending, 300);
 </script>
 </body>
 </html>
