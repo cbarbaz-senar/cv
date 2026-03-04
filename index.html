@@ -929,29 +929,15 @@ function checkPending() {
     // Clean the URL so refresh doesn't re-import
     window.history.replaceState({}, '', window.location.pathname);
 
-    // Nouveau : lire depuis localStorage (pas de limite de taille)
-    let data = null;
-    try {
-      const stored = localStorage.getItem('jt_pending_import');
-      if (stored) {
-        data = JSON.parse(stored);
-        data.url = cleanJobUrl(data.url || '');
-        localStorage.removeItem('jt_pending_import');
-      }
-    } catch(ls) {}
-
-    // Fallback : ancienne méthode via querystring (si localStorage vide)
-    if (!data) {
-      data = {
-        title:          decodeURIComponent(params.get('title')          || ''),
-        company:        decodeURIComponent(params.get('company')        || ''),
-        city:           decodeURIComponent(params.get('city')           || ''),
-        salary:         decodeURIComponent(params.get('salary')         || ''),
-        contract:       decodeURIComponent(params.get('contract')       || ''),
-        url:            cleanJobUrl(decodeURIComponent(params.get('url') || '')),
-        jobDescription: decodeURIComponent(params.get('jobDescription') || ''),
-      };
-    }
+    const data = {
+      title:          decodeURIComponent(params.get('title')          || ''),
+      company:        decodeURIComponent(params.get('company')        || ''),
+      city:           decodeURIComponent(params.get('city')           || ''),
+      salary:         decodeURIComponent(params.get('salary')         || ''),
+      contract:       decodeURIComponent(params.get('contract')       || ''),
+      url:            cleanJobUrl(decodeURIComponent(params.get('url') || '')),
+      jobDescription: decodeURIComponent(params.get('jobDescription') || ''),
+    };
     // Détection de doublon
     const dupJob = jobs.find(j => {
       if (data.url && j.url && cleanJobUrl(j.url) === cleanJobUrl(data.url)) return true;
@@ -1119,9 +1105,9 @@ if(!d.company)d.company=meta('og:site_name')||'';
 if(!d.city){var el=D.querySelector('[class*="location"],[class*="city"],[class*="ville"]');if(el)d.city=(el.innerText||'').trim();}
 if(!d.salary){var ms=D.body.innerText.match(/\\d[\\d\\s,.]*\\s*k?\\u20AC\\S*/i);if(ms)d.salary=normSalary(ms[0]);}
 ['title','company','city','salary'].forEach(function(k){if(d[k])d[k]=d[k].replace(/\\s+/g,' ').trim().slice(0,200);});
-if(d.jobDescription)d.jobDescription=d.jobDescription.replace(/\\s+/g,' ').trim().slice(0,2500);
-try{localStorage.setItem('jt_pending_import',JSON.stringify(d));}catch(ls){}
-window.open('${trackerUrl}?imp=1','_blank');
+if(d.jobDescription)d.jobDescription=d.jobDescription.replace(/\\s+/g,' ').trim().slice(0,8000);
+var q='?imp=1&title='+encodeURIComponent(d.title)+'&company='+encodeURIComponent(d.company)+'&city='+encodeURIComponent(d.city)+'&salary='+encodeURIComponent(d.salary)+'&contract='+encodeURIComponent(d.contract)+'&url='+encodeURIComponent(d.url)+'&jobDescription='+encodeURIComponent(d.jobDescription);
+window.open('${trackerUrl}'+q,'_blank');
 }catch(e){window.open('${trackerUrl}?imp=1&url='+encodeURIComponent(location.href),'_blank');}
 })();`;
 
